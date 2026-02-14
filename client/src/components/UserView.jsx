@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import API_URL from '../config/api';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,7 +43,7 @@ const UserView = ({ user, onLogout }) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/projects', {
+      const response = await fetch(`${API_URL}/api/projects`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './AdminDashboard.css';
+import API_URL from '../config/api';
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [formData, setFormData] = useState({
@@ -256,7 +257,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const fetchProjects = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/projects', {
+      const response = await fetch(`${API_URL}/api/projects`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -365,8 +366,8 @@ const AdminDashboard = ({ user, onLogout }) => {
       };
 
       const url = editingProject 
-        ? `http://localhost:5000/api/projects/${editingProject._id}`
-        : 'http://localhost:5000/api/projects';
+        ? `${API_URL}/api/projects/${editingProject._id}`
+        : `${API_URL}/api/projects`;
       
       const method = editingProject ? 'PUT' : 'POST';
 
@@ -525,7 +526,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/projects/${projectId}`, {
+      const response = await fetch(`${API_URL}/api/projects/${projectId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -653,7 +654,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       }
       
       console.log('Fetching Excel file from server...');
-      const response = await fetch('http://localhost:5000/api/projects/export/excel', {
+      const response = await fetch(`${API_URL}/api/projects/export/excel`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`

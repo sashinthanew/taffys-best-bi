@@ -290,3 +290,171 @@
     font-size: 2rem;
   }
 }
+
+/* Enhanced Mobile Responsive Styles */
+
+/* Tablets and below */
+@media (max-width: 1024px) {
+  .login-container {
+    padding: 30px 20px;
+  }
+  
+  .login-card {
+    padding: 40px 40px;
+    max-width: 90%;
+  }
+  
+  .login-header h1 {
+    font-size: 2.5rem;
+  }
+}
+
+/* Mobile Large (Portrait tablets and large phones) */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 20px 15px;
+    min-height: 100vh;
+    align-items: flex-start;
+    padding-top: 60px;
+  }
+  
+  .login-card {
+    padding: 35px 25px;
+    max-width: 95%;
+    border-radius: 20px;
+  }
+  
+  .login-header h1 {
+    font-size: 2.2rem;
+  }
+  
+  .login-header p {
+    font-size: 1rem;
+  }
+  
+  .form-group label {
+    font-size: 0.95rem;
+  }
+  
+  .form-group input,
+  .form-group select {
+    padding: 14px 18px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .submit-button {
+    padding: 14px;
+    font-size: 16px;
+  }
+  
+  .toggle-form p {
+    font-size: 0.9rem;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* Mobile Medium */
+@media (max-width: 480px) {
+  .login-container {
+    padding: 15px 10px;
+    padding-top: 40px;
+  }
+  
+  .login-card {
+    padding: 25px 20px;
+    max-width: 100%;
+    border-radius: 16px;
+    margin: 0 10px;
+  }
+  
+  .login-header h1 {
+    font-size: 1.8rem;
+    letter-spacing: -1px;
+  }
+  
+  .login-header p {
+    font-size: 0.95rem;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+  
+  .form-group input,
+  .form-group select {
+    padding: 13px 16px;
+    font-size: 16px;
+  }
+  
+  .submit-button {
+    padding: 13px;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+  }
+  
+  .error-message {
+    padding: 14px 18px;
+    font-size: 0.95rem;
+  }
+  
+  .toggle-form {
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+  
+  .toggle-form p {
+    font-size: 0.85rem;
+  }
+  
+  .toggle-form button {
+    font-size: 0.85rem;
+  }
+}
+
+/* Mobile Small */
+@media (max-width: 360px) {
+  .login-card {
+    padding: 20px 15px;
+  }
+  
+  .login-header h1 {
+    font-size: 1.6rem;
+  }
+  
+  .form-group input,
+  .form-group select {
+    padding: 12px 14px;
+  }
+  
+  .submit-button {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+/* Landscape mode on mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .login-container {
+    padding: 20px 15px;
+    align-items: flex-start;
+  }
+  
+  .login-card {
+    margin: 20px auto;
+  }
+  
+  .login-header h1 {
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+}

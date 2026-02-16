@@ -109,6 +109,26 @@ router.get('/export/excel', auth, async (req, res) => {
     projects.forEach((project, index) => {
       console.log(`Processing project ${index + 1}: ${project.projectName}`);
       
+      // Calculate values dynamically using the correct logic
+      const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+      const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+      const inGoing = parseFloat(project.costing?.inGoing) || 0;
+      const outGoing = parseFloat(project.costing?.outGoing) || 0;
+      const calCharges = parseFloat(project.costing?.calCharges) || 0;
+      const other = parseFloat(project.costing?.other) || 0;
+      const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
+      const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
+      const freightChargesCost = parseFloat(project.costing?.freightCharges) || 0;
+      
+      // Calculate profit: TWL Invoice - Supplier Invoice
+      const calculatedProfit = twlInvoice - supplierInvoice;
+      
+      // Calculate total expenses
+      const calculatedTotalExpenses = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freightChargesCost;
+      
+      // Calculate net profit: Profit - Total Expenses
+      const calculatedNetProfit = calculatedProfit - calculatedTotalExpenses;
+      
       worksheet.addRow({
         // Project Info
         projectNo: project.projectNo || '',
@@ -169,19 +189,19 @@ router.get('/export/excel', auth, async (req, res) => {
         buyerCancel: project.buyer?.summary?.cancel || 0,
         buyerBalanceReceived: project.buyer?.summary?.balanceReceived || 0,
         
-        // Costing
-        costingSupplierInvoice: project.costing?.supplierInvoiceAmount || 0,
-        costingTwlInvoice: project.costing?.twlInvoiceAmount || 0,
-        profit: project.costing?.profit || 0,
-        inGoing: project.costing?.inGoing || 0,
-        outGoing: project.costing?.outGoing || 0,
-        calCharges: project.costing?.calCharges || 0,
-        other: project.costing?.other || 0,
-        foreignBankCharges: project.costing?.foreignBankCharges || 0,
-        loanInterest: project.costing?.loanInterest || 0,
-        freightChargesCost: project.costing?.freightCharges || 0,
-        totalExpenses: project.costing?.total || 0,
-        netProfit: project.costing?.netProfit || 0
+        // Costing - USE CALCULATED VALUES
+        costingSupplierInvoice: supplierInvoice,
+        costingTwlInvoice: twlInvoice,
+        profit: calculatedProfit,  // ✅ Calculated: TWL - Supplier
+        inGoing: inGoing,
+        outGoing: outGoing,
+        calCharges: calCharges,
+        other: other,
+        foreignBankCharges: foreignBank,
+        loanInterest: loanInterest,
+        freightChargesCost: freightChargesCost,
+        totalExpenses: calculatedTotalExpenses,  // ✅ Calculated: Sum of expenses
+        netProfit: calculatedNetProfit  // ✅ Calculated: Profit - Total Expenses
       });
     });
 

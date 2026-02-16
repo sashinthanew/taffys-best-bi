@@ -190,8 +190,8 @@ projectSchema.pre('save', function() {
   const costingSupplierInvoice = this.costing.supplierInvoiceAmount || 0;
   const costingTwlInvoice = this.costing.twlInvoiceAmount || 0;
   
-  // Profit = Supplier Invoice Amount - TWL Invoice Amount
-  this.costing.profit = costingSupplierInvoice - costingTwlInvoice;
+  // Profit = TWL Invoice Amount - Supplier Invoice Amount (what we sell for - what we pay)
+  this.costing.profit = costingTwlInvoice - costingSupplierInvoice;
   
   // Total = InGoing + OutGoing + CAL Charges + Other + Foreign Bank Charges + Loan Interest + Freight Charges
   const inGoing = this.costing.inGoing || 0;
@@ -292,8 +292,8 @@ projectSchema.pre('findOneAndUpdate', function() {
     const costingSupplierInvoice = update.costing?.supplierInvoiceAmount || 0;
     const costingTwlInvoice = update.costing?.twlInvoiceAmount || 0;
     
-    // Profit = Supplier Invoice Amount - TWL Invoice Amount
-    update.costing.profit = costingSupplierInvoice - costingTwlInvoice;
+    // Profit = TWL Invoice Amount - Supplier Invoice Amount (what we sell for - what we pay)
+    update.costing.profit = costingTwlInvoice - costingSupplierInvoice;
     
     // Total = InGoing + OutGoing + CAL Charges + Other + Foreign Bank Charges + Loan Interest + Freight Charges
     const inGoing = update.costing?.inGoing || 0;

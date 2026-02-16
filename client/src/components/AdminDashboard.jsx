@@ -616,9 +616,9 @@ const AdminDashboard = ({ user, onLogout }) => {
     const loanInterest = parseFloat(formData.costingLoanInterest) || 0;
     const freight = parseFloat(formData.costingFreightCharges) || 0;
 
-    const profit = twlInvoice - supplierInvoice;  // ✅ Correct: Revenue - Cost
+    const profit = twlInvoice - supplierInvoice;
     const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
-    const netProfit = profit - total;  // ✅ Correct: Profit - Total Expenses
+    const netProfit = profit - total;
 
     setFormData(prev => ({
       ...prev,

@@ -32,7 +32,6 @@ const UserView = ({ user, onLogout }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedProject, setSelectedProject] = useState(null);
   const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'details'
 
   useEffect(() => {
@@ -52,9 +51,6 @@ const UserView = ({ user, onLogout }) => {
       const data = await response.json();
       if (data.success) {
         setProjects(data.projects);
-        if (data.projects.length > 0) {
-          setSelectedProject(data.projects[0]);
-        }
       } else {
         setError('Failed to fetch projects');
       }
@@ -279,7 +275,6 @@ const UserView = ({ user, onLogout }) => {
   };
 
   const stats = getOverviewStats();
-  const projectData = selectedProject ? getProjectData(selectedProject) : null;
 
   if (loading) {
     return (
@@ -335,7 +330,7 @@ const UserView = ({ user, onLogout }) => {
             className={`toggle-btn ${viewMode === 'details' ? 'active' : ''}`}
             onClick={() => setViewMode('details')}
           >
-            📋 Project Details
+            📋 All Project Details
           </button>
         </div>
 
@@ -412,165 +407,181 @@ const UserView = ({ user, onLogout }) => {
           </>
         )}
 
-        {/* Project Details Mode */}
+        {/* Project Details Mode - All Projects */}
         {viewMode === 'details' && (
           <>
-            {/* Project Selector */}
-            <div className="project-selector">
-              <label>Select Project:</label>
-              <select 
-                value={selectedProject?._id || ''} 
-                onChange={(e) => {
-                  const project = projects.find(p => p._id === e.target.value);
-                  setSelectedProject(project);
-                }}
-              >
-                {projects.map(project => (
-                  <option key={project._id} value={project._id}>
-                    {project.projectNo} - {project.projectName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {selectedProject && projectData && (
-              <>
-                {/* Project Info Card */}
-                <div className="project-info-card">
-                  <h2>{selectedProject.projectName}</h2>
-                  <div className="project-meta">
-                    <span><strong>Project No:</strong> {selectedProject.projectNo}</span>
-                    <span><strong>Date:</strong> {new Date(selectedProject.projectDate).toLocaleDateString()}</span>
-                    <span><strong>Supplier:</strong> {selectedProject.supplier?.proformaInvoice?.supplierName || 'N/A'}</span>
-                    <span><strong>Buyer:</strong> {selectedProject.buyer?.proformaInvoice?.buyerName || 'N/A'}</span>
-                  </div>
+            <div className="projects-details-section">
+              <h2>All Projects Financial Details 📋</h2>
+              
+              {projects.length === 0 ? (
+                <div className="no-projects">
+                  <p>📭 No projects found</p>
                 </div>
+              ) : (
+                <div className="projects-details-grid">
+                  {projects.map((project) => {
+                    const projectData = getProjectData(project);
+                    return (
+                      <div key={project._id} className="project-detail-card">
+                        {/* Project Header */}
+                        <div className="project-header">
+                          <h3>{project.projectName}</h3>
+                          <div className="project-meta">
+                            <span><strong>Project No:</strong> {project.projectNo}</span>
+                            <span><strong>Date:</strong> {new Date(project.projectDate).toLocaleDateString()}</span>
+                          </div>
+                        </div>
 
-                {/* Project Financial Stats */}
-                <div className="stats-grid">
-                  <div className="stat-card primary">
-                    <div className="stat-icon">💵</div>
-                    <div className="stat-content">
-                      <h3>Income</h3>
-                      <p className="stat-value">${projectData.income.toFixed(2)}</p>
-                    </div>
-                  </div>
+                        {/* Supplier & Buyer Info */}
+                        <div className="project-parties">
+                          <div className="party-info">
+                            <span><strong>🏭 Supplier:</strong> {project.supplier?.proformaInvoice?.supplierName || 'N/A'}</span>
+                            <span><strong>🛒 Buyer:</strong> {project.buyer?.proformaInvoice?.buyerName || 'N/A'}</span>
+                          </div>
+                        </div>
 
-                  <div className="stat-card danger">
-                    <div className="stat-icon">💸</div>
-                    <div className="stat-content">
-                      <h3>Outcome</h3>
-                      <p className="stat-value">${projectData.outcome.toFixed(2)}</p>
-                    </div>
-                  </div>
+                        {/* Financial Summary Cards */}
+                        <div className="project-stats-grid">
+                          <div className="stat-item">
+                            <div className="stat-label">💰 Income</div>
+                            <div className="stat-value success">${projectData.income.toFixed(2)}</div>
+                          </div>
+                          
+                          <div className="stat-item">
+                            <div className="stat-label">💸 Outcome</div>
+                            <div className="stat-value danger">${projectData.outcome.toFixed(2)}</div>
+                          </div>
+                          
+                          <div className="stat-item">
+                            <div className="stat-label">🏦 Loans</div>
+                            <div className="stat-value warning">${projectData.loans.toFixed(2)}</div>
+                          </div>
+                          
+                          <div className="stat-item">
+                            <div className="stat-label">📥 TWL Received</div>
+                            <div className="stat-value info">${projectData.twlReceived.toFixed(2)}</div>
+                          </div>
+                          
+                          <div className="stat-item full-width">
+                            <div className="stat-label">📈 Net Profit</div>
+                            <div className={`stat-value ${projectData.netProfit >= 0 ? 'success' : 'danger'}`}>
+                              ${projectData.netProfit.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
 
-                  <div className="stat-card warning">
-                    <div className="stat-icon">🏦</div>
-                    <div className="stat-content">
-                      <h3>Loans</h3>
-                      <p className="stat-value">${projectData.loans.toFixed(2)}</p>
-                    </div>
-                  </div>
+                        {/* Supplier Details */}
+                        <div className="section-details">
+                          <h4>🏭 Supplier Details</h4>
+                          <div className="details-grid">
+                            <div className="detail-item">
+                              <span>Invoice Amount:</span>
+                              <span>${project.supplier?.proformaInvoice?.invoiceAmount?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>Credit Note:</span>
+                              <span>${project.supplier?.proformaInvoice?.creditNote?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>Final Invoice:</span>
+                              <span>${project.supplier?.proformaInvoice?.finalInvoiceAmount?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>Advance Payment:</span>
+                              <span>${project.supplier?.advancePayment?.totalPayment?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>Balance Payment:</span>
+                              <span>${project.supplier?.balancePayment?.totalPayment?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>Total Amount:</span>
+                              <span>${project.supplier?.summary?.totalAmount?.toFixed(2) || '0.00'}</span>
+                            </div>
+                          </div>
+                        </div>
 
-                  <div className="stat-card info">
-                    <div className="stat-icon">📥</div>
-                    <div className="stat-content">
-                      <h3>TWL Received</h3>
-                      <p className="stat-value">${projectData.twlReceived.toFixed(2)}</p>
-                    </div>
-                  </div>
+                        {/* Buyer Details */}
+                        <div className="section-details">
+                          <h4>🛒 Buyer Details</h4>
+                          <div className="details-grid">
+                            <div className="detail-item">
+                              <span>TWL Invoice Amount:</span>
+                              <span>${project.buyer?.proformaInvoice?.twlInvoiceAmount?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>Final Invoice:</span>
+                              <span>${project.buyer?.proformaInvoice?.finalInvoiceAmount?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>Advance Received:</span>
+                              <span>${project.buyer?.advancePayment?.twlReceived?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>Balance Received:</span>
+                              <span>${project.buyer?.balancePayment?.twlReceived?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>Total Received:</span>
+                              <span>${project.buyer?.summary?.totalReceived?.toFixed(2) || '0.00'}</span>
+                            </div>
+                          </div>
+                        </div>
 
-                  <div className={`stat-card ${projectData.netProfit >= 0 ? 'success' : 'danger'}`}>
-                    <div className="stat-icon">📈</div>
-                    <div className="stat-content">
-                      <h3>Net Profit</h3>
-                      <p className="stat-value">${projectData.netProfit.toFixed(2)}</p>
-                    </div>
-                  </div>
-                </div>
+                        {/* Costing Details */}
+                        <div className="section-details">
+                          <h4>💰 Costing & Profit</h4>
+                          <div className="details-grid">
+                            <div className="detail-item">
+                              <span>Supplier Invoice:</span>
+                              <span>${project.costing?.supplierInvoiceAmount?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>TWL Invoice:</span>
+                              <span>${project.costing?.twlInvoiceAmount?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>Gross Profit:</span>
+                              <span>${project.costing?.profit?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span>Total Expenses:</span>
+                              <span>${(project.costing?.inGoing + project.costing?.outGoing + project.costing?.calCharges + project.costing?.other + project.costing?.foreignBankCharges + project.costing?.loanInterest + project.costing?.freightCharges || 0).toFixed(2)}</span>
+                            </div>
+                            <div className="detail-item full-width">
+                              <span><strong>Net Profit:</strong></span>
+                              <span className={`profit-highlight ${projectData.netProfit >= 0 ? 'positive' : 'negative'}`}>
+                                <strong>${projectData.netProfit.toFixed(2)}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
 
-                {/* Project Charts */}
-                <div className="charts-section">
-                  <div className="chart-card">
-                    <h3>Financial Overview</h3>
-                    <div className="chart-container">
-                      <Bar data={getProjectFinancialChart(projectData)} options={chartOptions} />
-                    </div>
-                  </div>
-
-                  {getExpensesChart(projectData) && (
-                    <div className="chart-card">
-                      <h3>Expenses Breakdown</h3>
-                      <div className="chart-container">
-                        <Pie data={getExpensesChart(projectData)} options={pieChartOptions} />
+                        {/* Mini Chart */}
+                        <div className="project-mini-chart">
+                          <div className="chart-container small">
+                            <Bar 
+                              data={getProjectFinancialChart(projectData)} 
+                              options={{
+                                ...chartOptions,
+                                plugins: {
+                                  ...chartOptions.plugins,
+                                  legend: { display: false }
+                                },
+                                scales: {
+                                  ...chartOptions.scales,
+                                  x: { display: false }
+                                }
+                              }} 
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
-
-                {/* Detailed Numbers Table */}
-                <div className="details-table">
-                  <h3>Financial Details</h3>
-                  <table>
-                    <tbody>
-                      <tr>
-                        <td><strong>Total Income (Buyer)</strong></td>
-                        <td className="text-success">${projectData.income.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td><strong>Total Outcome (Supplier)</strong></td>
-                        <td className="text-danger">${projectData.outcome.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td><strong>Loan Amount</strong></td>
-                        <td>${projectData.loans.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td><strong>TWL Received (Total)</strong></td>
-                        <td className="text-info">${projectData.twlReceived.toFixed(2)}</td>
-                      </tr>
-                      <tr className="separator">
-                        <td colSpan="2"><strong>Expenses Breakdown</strong></td>
-                      </tr>
-                      <tr>
-                        <td>In Going</td>
-                        <td>${projectData.expenses.inGoing.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td>Out Going</td>
-                        <td>${projectData.expenses.outGoing.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td>CAL Charges</td>
-                        <td>${projectData.expenses.calCharges.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td>Other</td>
-                        <td>${projectData.expenses.other.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td>Foreign Bank Charges</td>
-                        <td>${projectData.expenses.foreignBankCharges.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td>Loan Interest</td>
-                        <td>${projectData.expenses.loanInterest.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td>Freight Charges</td>
-                        <td>${projectData.expenses.freightCharges.toFixed(2)}</td>
-                      </tr>
-                      <tr className="total-row">
-                        <td><strong>NET PROFIT</strong></td>
-                        <td className={projectData.netProfit >= 0 ? 'text-success' : 'text-danger'}>
-                          <strong>${projectData.netProfit.toFixed(2)}</strong>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
+              )}
+            </div>
           </>
         )}
 

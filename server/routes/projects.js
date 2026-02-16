@@ -129,6 +129,17 @@ router.get('/export/excel', auth, async (req, res) => {
       // Calculate net profit: Profit - Total Expenses
       const calculatedNetProfit = calculatedProfit - calculatedTotalExpenses;
       
+      // Calculate supplier balance payment total (now manual entry, use stored value)
+      const storedBalanceTotalPayment = parseFloat(project.supplier?.balancePayment?.totalPayment) || 0;
+      
+      // Calculate supplier summary (Total Amount = Advance Total + Balance Total)
+      const advanceTotalPayment = parseFloat(project.supplier?.advancePayment?.totalPayment) || 0;
+      const calculatedSupplierTotalAmount = advanceTotalPayment + storedBalanceTotalPayment;
+      
+      // Calculate supplier summary balance payment (Final Invoice - Total Amount)
+      const finalInvoiceAmount = parseFloat(project.supplier?.proformaInvoice?.finalInvoiceAmount) || 0;
+      const calculatedSupplierBalancePayment = finalInvoiceAmount - calculatedSupplierTotalAmount;
+      
       worksheet.addRow({
         // Project Info
         projectNo: project.projectNo || '',
@@ -155,12 +166,12 @@ router.get('/export/excel', auth, async (req, res) => {
         supplierBalanceDate: project.supplier?.balancePayment?.date ? new Date(project.supplier.balancePayment.date).toLocaleDateString() : '',
         supplierBalanceRef: project.supplier?.balancePayment?.reference || '',
         twlContributionBal: project.supplier?.balancePayment?.twlContribution || 0,
-        totalPaymentBal: project.supplier?.balancePayment?.totalPayment || 0,
+        totalPaymentBal: storedBalanceTotalPayment,  // Use stored value (manual entry)
         
         // Supplier - Summary
-        supplierTotalAmount: project.supplier?.summary?.totalAmount || 0,
+        supplierTotalAmount: calculatedSupplierTotalAmount,  // ✅ Calculated: Advance Total + Balance Total
         supplierCancelAmount: project.supplier?.summary?.cancelAmount || 0,
-        supplierBalancePayment: project.supplier?.summary?.balancePayment || 0,
+        supplierBalancePayment: calculatedSupplierBalancePayment,  // ✅ Calculated: Final Invoice - Total Amount
         
         // Buyer - Proforma Invoice
         buyerName: project.buyer?.proformaInvoice?.buyerName || '',

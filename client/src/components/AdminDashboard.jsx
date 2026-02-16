@@ -1710,22 +1710,50 @@ const AdminDashboard = ({ user, onLogout }) => {
                   </div>
 
                   {/* Quick Summary */}
-                  <div className="project-quick-summary">
-                    <div className="summary-item">
-                      <span className="summary-label">Supplier:</span>
-                      <span className="summary-value">{project.supplier?.proformaInvoice?.supplierName || 'N/A'}</span>
-                    </div>
-                    <div className="summary-item">
-                      <span className="summary-label">Buyer:</span>
-                      <span className="summary-value">{project.buyer?.proformaInvoice?.buyerName || 'N/A'}</span>
-                    </div>
-                    <div className="summary-item highlight">
-                      <span className="summary-label">Net Profit:</span>
-                      <span className={`summary-value ${(project.costing?.netProfit || 0) >= 0 ? 'profit-positive' : 'profit-negative'}`}>
-                        ${(project.costing?.netProfit || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
+<div className="project-quick-summary">
+  <div className="summary-item">
+    <span className="summary-label">Supplier:</span>
+    <span className="summary-value">{project.supplier?.proformaInvoice?.supplierName || 'N/A'}</span>
+  </div>
+  <div className="summary-item">
+    <span className="summary-label">Buyer:</span>
+    <span className="summary-value">{project.buyer?.proformaInvoice?.buyerName || 'N/A'}</span>
+  </div>
+  <div className="summary-item highlight">
+    <span className="summary-label">Net Profit:</span>
+    <span className={`summary-value ${(() => {
+      const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+      const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+      const inGoing = parseFloat(project.costing?.inGoing) || 0;
+      const outGoing = parseFloat(project.costing?.outGoing) || 0;
+      const calCharges = parseFloat(project.costing?.calCharges) || 0;
+      const other = parseFloat(project.costing?.other) || 0;
+      const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
+      const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
+      const freight = parseFloat(project.costing?.freightCharges) || 0;
+      const profit = twlInvoice - supplierInvoice;
+      const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
+      const netProfit = profit - total;
+      return netProfit >= 0;
+    })() ? 'profit-positive' : 'profit-negative'}`}>
+      ${(() => {
+        const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+        const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+        const inGoing = parseFloat(project.costing?.inGoing) || 0;
+        const outGoing = parseFloat(project.costing?.outGoing) || 0;
+        const calCharges = parseFloat(project.costing?.calCharges) || 0;
+        const other = parseFloat(project.costing?.other) || 0;
+        const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
+        const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
+        const freight = parseFloat(project.costing?.freightCharges) || 0;
+        const profit = twlInvoice - supplierInvoice;
+        const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
+        const netProfit = profit - total;
+        return netProfit.toFixed(2);
+      })()}
+    </span>
+  </div>
+</div>
 
                   {/* Expanded Details */}
                   {expandedProject === project._id && (

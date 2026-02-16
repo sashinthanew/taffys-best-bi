@@ -70,6 +70,26 @@
   margin-bottom: 40px;
 }
 
+.login-logo {
+  width: 150px;        /* Adjust width */
+  max-height: 120px;   /* Adjust max height */
+  object-fit: contain;
+  margin-bottom: 20px;
+  animation: logoFadeIn 1s ease-in-out;
+  filter: drop-shadow(0 4px 20px rgba(102, 126, 234, 0.3));
+}
+
+@keyframes logoFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .login-header h1 {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   -webkit-background-clip: text;

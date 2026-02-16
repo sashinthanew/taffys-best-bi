@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import './Login.css';
 import API_URL from '../config/api';
+import logo from '../assets/logo.png'; // Change to your filename
 
 const Login = ({ onLogin }) => {
   const [isRegister, setIsRegister] = useState(false);
@@ -53,6 +54,7 @@ const Login = ({ onLogin }) => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
+          <img src={logo} alt="TWL Logo" className="login-logo" />
           <h1>🏢 TWL System</h1>
           <p>{isRegister ? 'Create your account' : 'Sign in to your account'}</p>
         </div>

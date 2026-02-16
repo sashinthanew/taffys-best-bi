@@ -1952,71 +1952,114 @@ const AdminDashboard = ({ user, onLogout }) => {
                       </div>
 
                       {/* Costing Details */}
-                      <div className="detail-section">
-                        <h4 className="detail-section-title">💰 Costing Details</h4>
-                        
-                        <div className="detail-subsection">
-                          <h5>Revenue</h5>
-                          <div className="detail-row">
-                            <span>Supplier Invoice Amount:</span>
-                            <span className="value">${project.costing?.supplierInvoiceAmount?.toFixed(2) || '0.00'}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span>TWL Invoice Amount:</span>
-                            <span className="value">${project.costing?.twlInvoiceAmount?.toFixed(2) || '0.00'}</span>
-                          </div>
-                          <div className="detail-row highlight">
-                            <span>Profit:</span>
-                            <span className="value">${project.costing?.profit?.toFixed(2) || '0.00'}</span>
-                          </div>
-                        </div>
+<div className="detail-section">
+  <h4 className="detail-section-title">💰 Costing Details</h4>
+  
+  <div className="detail-subsection">
+    <h5>Revenue</h5>
+    <div className="detail-row">
+      <span>Supplier Invoice Amount:</span>
+      <span className="value">${project.costing?.supplierInvoiceAmount?.toFixed(2) || '0.00'}</span>
+    </div>
+    <div className="detail-row">
+      <span>TWL Invoice Amount:</span>
+      <span className="value">${project.costing?.twlInvoiceAmount?.toFixed(2) || '0.00'}</span>
+    </div>
+    <div className="detail-row highlight">
+      <span>Profit:</span>
+      <span className="value">${(() => {
+        const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+        const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+        const profit = twlInvoice - supplierInvoice;
+        return profit.toFixed(2);
+      })()}</span>
+    </div>
+  </div>
 
-                        <div className="detail-subsection">
-                          <h5>Expenses</h5>
-                          <div className="detail-row">
-                            <span>In Going:</span>
-                            <span className="value">${project.costing?.inGoing?.toFixed(2) || '0.00'}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span>Out Going:</span>
-                            <span className="value">${project.costing?.outGoing?.toFixed(2) || '0.00'}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span>CAL Charges:</span>
-                            <span className="value">${project.costing?.calCharges?.toFixed(2) || '0.00'}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span>Other:</span>
-                            <span className="value">${project.costing?.other?.toFixed(2) || '0.00'}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span>Foreign Bank Charges:</span>
-                            <span className="value">${project.costing?.foreignBankCharges?.toFixed(2) || '0.00'}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span>Loan Interest:</span>
-                            <span className="value">${project.costing?.loanInterest?.toFixed(2) || '0.00'}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span>Freight Charges:</span>
-                            <span className="value">${project.costing?.freightCharges?.toFixed(2) || '0.00'}</span>
-                          </div>
-                          <div className="detail-row highlight">
-                            <span>Total Expenses:</span>
-                            <span className="value">${project.costing?.total?.toFixed(2) || '0.00'}</span>
-                          </div>
-                        </div>
+  <div className="detail-subsection">
+    <h5>Expenses</h5>
+    <div className="detail-row">
+      <span>In Going:</span>
+      <span className="value">${project.costing?.inGoing?.toFixed(2) || '0.00'}</span>
+    </div>
+    <div className="detail-row">
+      <span>Out Going:</span>
+      <span className="value">${project.costing?.outGoing?.toFixed(2) || '0.00'}</span>
+    </div>
+    <div className="detail-row">
+      <span>CAL Charges:</span>
+      <span className="value">${project.costing?.calCharges?.toFixed(2) || '0.00'}</span>
+    </div>
+    <div className="detail-row">
+      <span>Other:</span>
+      <span className="value">${project.costing?.other?.toFixed(2) || '0.00'}</span>
+    </div>
+    <div className="detail-row">
+      <span>Foreign Bank Charges:</span>
+      <span className="value">${project.costing?.foreignBankCharges?.toFixed(2) || '0.00'}</span>
+    </div>
+    <div className="detail-row">
+      <span>Loan Interest:</span>
+      <span className="value">${project.costing?.loanInterest?.toFixed(2) || '0.00'}</span>
+    </div>
+    <div className="detail-row">
+      <span>Freight Charges:</span>
+      <span className="value">${project.costing?.freightCharges?.toFixed(2) || '0.00'}</span>
+    </div>
+    <div className="detail-row highlight">
+      <span>Total Expenses:</span>
+      <span className="value">${(() => {
+        const inGoing = parseFloat(project.costing?.inGoing) || 0;
+        const outGoing = parseFloat(project.costing?.outGoing) || 0;
+        const calCharges = parseFloat(project.costing?.calCharges) || 0;
+        const other = parseFloat(project.costing?.other) || 0;
+        const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
+        const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
+        const freight = parseFloat(project.costing?.freightCharges) || 0;
+        const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
+        return total.toFixed(2);
+      })()}</span>
+    </div>
+  </div>
 
-                        <div className="detail-subsection summary-subsection net-profit-section">
-                          <h5>Final Result</h5>
-                          <div className="detail-row net-profit-row">
-                            <span>Net Profit:</span>
-                            <span className={`value net-profit-value ${(project.costing?.netProfit || 0) >= 0 ? 'profit-positive' : 'profit-negative'}`}>
-                              ${project.costing?.netProfit?.toFixed(2) || '0.00'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+  <div className="detail-subsection summary-subsection net-profit-section">
+    <h5>Final Result</h5>
+    <div className="detail-row net-profit-row">
+      <span>Net Profit:</span>
+      <span className={`value net-profit-value ${(() => {
+        const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+        const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+        const inGoing = parseFloat(project.costing?.inGoing) || 0;
+        const outGoing = parseFloat(project.costing?.outGoing) || 0;
+        const calCharges = parseFloat(project.costing?.calCharges) || 0;
+        const other = parseFloat(project.costing?.other) || 0;
+        const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
+        const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
+        const freight = parseFloat(project.costing?.freightCharges) || 0;
+        const profit = twlInvoice - supplierInvoice;
+        const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
+        const netProfit = profit - total;
+        return netProfit >= 0;
+      })() ? 'profit-positive' : 'profit-negative'}`}>
+        ${(() => {
+          const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+          const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+          const inGoing = parseFloat(project.costing?.inGoing) || 0;
+          const outGoing = parseFloat(project.costing?.outGoing) || 0;
+          const calCharges = parseFloat(project.costing?.calCharges) || 0;
+          const other = parseFloat(project.costing?.other) || 0;
+          const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
+          const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
+          const freight = parseFloat(project.costing?.freightCharges) || 0;
+          const profit = twlInvoice - supplierInvoice;
+          const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
+          const netProfit = profit - total;
+          return netProfit.toFixed(2);
+        })()}
+      </span>
+    </div>
+  </div>
+</div>
                     </div>
                   )}
                 </div>

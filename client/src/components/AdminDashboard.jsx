@@ -190,18 +190,6 @@ const AdminDashboard = ({ user, onLogout }) => {
     }));
   }, [formData.loanAmount, formData.twlContribution, formData.finalInvoiceAmount]);
 
-  // Auto-calculate supplier balance payment total
-  useEffect(() => {
-    const amount = parseFloat(formData.supplierBalanceAmount) || 0;
-    const twl = parseFloat(formData.supplierBalanceTwlContribution) || 0;
-    const total = amount + twl;
-    
-    setFormData(prev => ({
-      ...prev,
-      supplierBalanceTotalPayment: total.toFixed(2)
-    }));
-  }, [formData.supplierBalanceAmount, formData.supplierBalanceTwlContribution]);
-
   // Auto-calculate final invoice amount
   useEffect(() => {
     const invoiceAmount = parseFloat(formData.supplierInvoiceAmount) || 0;
@@ -218,14 +206,10 @@ const AdminDashboard = ({ user, onLogout }) => {
   useEffect(() => {
     const advanceTotalPayment = parseFloat(formData.totalPayment) || 0;
     const balanceTotalPayment = parseFloat(formData.supplierBalanceTotalPayment) || 0;
-    const creditNote = parseFloat(formData.creditNote) || 0;
     const finalInvoiceAmount = parseFloat(formData.finalInvoiceAmount) || 0;
     
     // Total Amount = Total Payment (Advance) + Total Payment (Balance)
     const totalAmount = advanceTotalPayment + balanceTotalPayment;
-    
-    // Cancel Amount = Credit Note - Total Amount
-    const cancelAmount = creditNote - totalAmount;
     
     // Balance Payment = Final Invoice Amount - Total Amount
     const balancePayment = finalInvoiceAmount - totalAmount;
@@ -233,13 +217,12 @@ const AdminDashboard = ({ user, onLogout }) => {
     setFormData(prev => ({
       ...prev,
       supplierTotalAmount: totalAmount.toFixed(2),
-      supplierCancelAmount: cancelAmount.toFixed(2),
+      // supplierCancelAmount is now manually entered, not auto-calculated
       supplierSummaryBalancePayment: balancePayment.toFixed(2)
     }));
   }, [
     formData.totalPayment,
     formData.supplierBalanceTotalPayment,
-    formData.creditNote,
     formData.finalInvoiceAmount
   ]);
 
@@ -589,13 +572,12 @@ const AdminDashboard = ({ user, onLogout }) => {
     const finalInvoice = parseFloat(formData.buyerFinalInvoiceAmount) || 0;
     
     const totalReceived = advanceTwl + balanceTwl;
-    const cancel = 0;
     const balanceReceived = finalInvoice - totalReceived;
     
     setFormData(prev => ({
       ...prev,
       buyerTotalReceived: totalReceived.toFixed(2),
-      buyerCancel: cancel.toFixed(2),
+      // buyerCancel is now manually entered, not auto-calculated
       buyerBalanceReceived: balanceReceived.toFixed(2)
     }));
   }, [
@@ -1070,20 +1052,21 @@ const AdminDashboard = ({ user, onLogout }) => {
                     </div>
 
                     <div className="form-group">
-                      <label>Cancel Amount ($) <span className="auto-calc">Auto-calculated</span></label>
-                      <input
-                        type="number"
-                        name="supplierCancelAmount"
-                        value={formData.supplierCancelAmount}
-                        readOnly
-                        placeholder="0.00"
-                        disabled
-                        className="readonly-field"
-                      />
-                    </div>
+                    <label>Cancel Amount ($)</label>
+                    <input
+                      type="number"
+                      name="supplierCancelAmount"
+                      value={formData.supplierCancelAmount}
+                      onChange={handleChange}
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      disabled={loading}
+                    />
+                  </div>
 
-                    <div className="form-group">
-                      <label>Balance Payment ($) <span className="auto-calc">Auto-calculated</span></label>
+                  <div className="form-group">
+                    <label>Balance Payment ($) <span className="auto-calc">Auto-calculated</span></label>
                       <input
                         type="number"
                         name="supplierSummaryBalancePayment"
@@ -1343,20 +1326,21 @@ const AdminDashboard = ({ user, onLogout }) => {
                     </div>
 
                     <div className="form-group">
-                      <label>Cancel ($) <span className="auto-calc">Auto-calculated</span></label>
-                      <input
-                        type="number"
-                        name="buyerCancel"
-                        value={formData.buyerCancel}
-                        readOnly
-                        placeholder="0.00"
-                        disabled
-                        className="readonly-field"
-                      />
-                    </div>
+                    <label>Cancel ($)</label>
+                    <input
+                      type="number"
+                      name="buyerCancel"
+                      value={formData.buyerCancel}
+                      onChange={handleChange}
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      disabled={loading}
+                    />
+                  </div>
 
-                    <div className="form-group">
-                      <label>Balance Received ($) <span className="auto-calc">Auto-calculated</span></label>
+                  <div className="form-group">
+                    <label>Balance Received ($) <span className="auto-calc">Auto-calculated</span></label>
                       <input
                         type="number"
                         name="buyerBalanceReceived"

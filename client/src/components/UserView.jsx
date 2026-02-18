@@ -33,6 +33,7 @@ const UserView = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'details'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'Active', 'Inactive'
 
   useEffect(() => {
     fetchProjects();
@@ -62,17 +63,31 @@ const UserView = ({ user, onLogout }) => {
     }
   };
 
+  // Filter projects based on status
+  const getFilteredProjects = () => {
+    if (statusFilter === 'all') return projects;
+    return projects.filter(p => p.status === statusFilter);
+  };
+
+  const filteredProjects = getFilteredProjects();
+
   // Calculate overview statistics
   const getOverviewStats = () => {
-    const totalProjects = projects.length;
-    const totalIncome = projects.reduce((sum, p) => sum + (p.buyer?.summary?.totalReceived || 0), 0);
-    const totalOutcome = projects.reduce((sum, p) => sum + (p.supplier?.summary?.totalAmount || 0), 0);
-    const totalLoans = projects.reduce((sum, p) => sum + (p.supplier?.advancePayment?.loanAmount || 0), 0);
-    const totalNetProfit = projects.reduce((sum, p) => sum + (p.costing?.netProfit || 0), 0);
-    const totalTWLReceived = projects.reduce((sum, p) => sum + (p.buyer?.advancePayment?.twlReceived || 0) + (p.buyer?.balancePayment?.twlReceived || 0), 0);
+    const totalProjects = filteredProjects.length;
+    const activeProjects = projects.filter(p => p.status === 'Active').length;
+    const inactiveProjects = projects.filter(p => p.status === 'Inactive').length;
+    const totalIncome = filteredProjects.reduce((sum, p) => sum + (p.buyer?.summary?.totalReceived || 0), 0);
+    const totalOutcome = filteredProjects.reduce((sum, p) => sum + (p.supplier?.summary?.totalAmount || 0), 0);
+    const totalLoans = filteredProjects.reduce((sum, p) => sum + (p.supplier?.advancePayment?.loanAmount || 0), 0);
+    const totalNetProfit = filteredProjects.reduce((sum, p) => sum + (p.costing?.netProfit || 0), 0);
+    const totalTWLReceived = filteredProjects.reduce((sum, p) => sum + (p.buyer?.advancePayment?.twlReceived || 0) + (p.buyer?.balancePayment?.twlReceived || 0), 0);
 
     return {
       totalProjects,
+      activeProjects,
+      inactiveProjects,
+      activeProjects,
+      inactiveProjects,
       totalIncome,
       totalOutcome,
       totalLoans,
@@ -106,13 +121,49 @@ const UserView = ({ user, onLogout }) => {
   // Overview Chart - All Projects Net Profit
   const getOverviewChartData = () => {
     return {
-      labels: projects.map(p => p.projectNo),
+      labels: filteredProjects.map(p => p.projectNo),
       datasets: [
         {
           label: 'Net Profit',
-          data: projects.map(p => p.costing?.netProfit || 0),
-          backgroundColor: projects.map(p => (p.costing?.netProfit || 0) >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
-          borderColor: projects.map(p => (p.costing?.netProfit || 0) >= 0 ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)'),
+          data: filteredProjects.map(p => p.costing?.netProfit || 0),
+          backgroundColor: filteredProjects.map(p => (p.costing?.netProfit || 0) >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+          borderColor: filteredProjects.map(p => (p.costing?.netProfit || 0) >= 0 ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)'),
+          borderWidth: 2,
+        },
+      ],
+    };
+  };
+
+  // Detailed Financial Breakdown Chart for Each Project
+  const getDetailedFinancialChart = (projectData, project) => {
+    if (!projectData) return null;
+
+    return {
+      labels: ['Supplier Invoice', 'TWL Invoice', 'Total Expenses', 'Net Profit'],
+      datasets: [
+        {
+          label: 'Financial Breakdown ($)',
+          data: [
+            project.costing?.supplierInvoiceAmount || 0,
+            project.costing?.twlInvoiceAmount || 0,
+            (projectData.expenses.inGoing + projectData.expenses.outGoing + 
+             projectData.expenses.calCharges + projectData.expenses.other + 
+             projectData.expenses.foreignBankCharges + projectData.expenses.loanInterest + 
+             projectData.expenses.freightCharges),
+            projectData.netProfit
+          ],
+          backgroundColor: [
+            'rgba(239, 68, 68, 0.7)',
+            'rgba(59, 130, 246, 0.7)',
+            'rgba(251, 191, 36, 0.7)',
+            projectData.netProfit >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(220, 38, 38, 0.7)'
+          ],
+          borderColor: [
+            'rgb(239, 68, 68)',
+            'rgb(59, 130, 246)',
+            'rgb(251, 191, 36)',
+            projectData.netProfit >= 0 ? 'rgb(34, 197, 94)' : 'rgb(220, 38, 38)'
+          ],
           borderWidth: 2,
         },
       ],
@@ -196,7 +247,7 @@ const UserView = ({ user, onLogout }) => {
 
   // Income vs Outcome Trend
   const getIncomeOutcomeTrend = () => {
-    const sortedProjects = [...projects].sort((a, b) => 
+    const sortedProjects = [...filteredProjects].sort((a, b) => 
       new Date(a.projectDate) - new Date(b.projectDate)
     );
 
@@ -334,6 +385,31 @@ const UserView = ({ user, onLogout }) => {
           </button>
         </div>
 
+        {/* Status Filter */}
+        <div className="status-filter-section">
+          <h3>Filter by Status:</h3>
+          <div className="status-filter-buttons">
+            <button 
+              className={`filter-status-btn ${statusFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setStatusFilter('all')}
+            >
+              📊 All Projects ({projects.length})
+            </button>
+            <button 
+              className={`filter-status-btn status-active-btn ${statusFilter === 'Active' ? 'active' : ''}`}
+              onClick={() => setStatusFilter('Active')}
+            >
+              ✓ Active ({stats.activeProjects})
+            </button>
+            <button 
+              className={`filter-status-btn status-inactive-btn ${statusFilter === 'Inactive' ? 'active' : ''}`}
+              onClick={() => setStatusFilter('Inactive')}
+            >
+              ✕ Inactive ({stats.inactiveProjects})
+            </button>
+          </div>
+        </div>
+
         {/* Overview Mode */}
         {viewMode === 'overview' && (
           <>
@@ -344,6 +420,23 @@ const UserView = ({ user, onLogout }) => {
                 <div className="stat-content">
                   <h3>Total Projects</h3>
                   <p className="stat-value">{stats.totalProjects}</p>
+                  <small className="stat-subtitle">Displaying {filteredProjects.length} projects</small>
+                </div>
+              </div>
+
+              <div className="stat-card success">
+                <div className="stat-icon">✓</div>
+                <div className="stat-content">
+                  <h3>Active Projects</h3>
+                  <p className="stat-value">{stats.activeProjects}</p>
+                </div>
+              </div>
+
+              <div className="stat-card danger">
+                <div className="stat-icon">✕</div>
+                <div className="stat-content">
+                  <h3>Inactive Projects</h3>
+                  <p className="stat-value">{stats.inactiveProjects}</p>
                 </div>
               </div>
 
@@ -413,19 +506,24 @@ const UserView = ({ user, onLogout }) => {
             <div className="projects-details-section">
               <h2>All Projects Financial Details 📋</h2>
               
-              {projects.length === 0 ? (
+              {filteredProjects.length === 0 ? (
                 <div className="no-projects">
                   <p>📭 No projects found</p>
                 </div>
               ) : (
                 <div className="projects-details-grid">
-                  {projects.map((project) => {
+                  {filteredProjects.map((project) => {
                     const projectData = getProjectData(project);
                     return (
                       <div key={project._id} className="project-detail-card">
                         {/* Project Header */}
                         <div className="project-header">
-                          <h3>{project.projectName}</h3>
+                          <div className="header-left">
+                            <h3>{project.projectName}</h3>
+                            <span className={`status-badge ${project.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
+                              {project.status === 'Active' ? '✓ Active' : '✕ Inactive'}
+                            </span>
+                          </div>
                           <div className="project-meta">
                             <span><strong>Project No:</strong> {project.projectNo}</span>
                             <span><strong>Date:</strong> {new Date(project.projectDate).toLocaleDateString()}</span>
@@ -557,25 +655,39 @@ const UserView = ({ user, onLogout }) => {
                           </div>
                         </div>
 
-                        {/* Mini Chart */}
-                        <div className="project-mini-chart">
-                          <div className="chart-container small">
+                        {/* Detailed Financial Breakdown Chart */}
+                        <div className="project-financial-chart">
+                          <h4>📊 Financial Breakdown</h4>
+                          <div className="chart-container medium">
                             <Bar 
-                              data={getProjectFinancialChart(projectData)} 
+                              data={getDetailedFinancialChart(projectData, project)} 
                               options={{
                                 ...chartOptions,
                                 plugins: {
                                   ...chartOptions.plugins,
-                                  legend: { display: false }
-                                },
-                                scales: {
-                                  ...chartOptions.scales,
-                                  x: { display: false }
+                                  legend: { display: false },
+                                  title: {
+                                    display: true,
+                                    text: 'Financial Components ($)'
+                                  }
                                 }
                               }} 
                             />
                           </div>
                         </div>
+
+                        {/* Expenses Pie Chart */}
+                        {getExpensesChart(projectData) && (
+                          <div className="project-expenses-chart">
+                            <h4>💰 Expenses Breakdown</h4>
+                            <div className="chart-container medium">
+                              <Pie 
+                                data={getExpensesChart(projectData)} 
+                                options={pieChartOptions} 
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

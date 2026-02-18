@@ -8,6 +8,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     projectName: '',
     projectNo: '',
     projectDate: '',
+    status: 'Active',  // ADD THIS LINE
     
     // Supplier - Proforma Invoice
     supplierName: '',
@@ -274,6 +275,7 @@ const AdminDashboard = ({ user, onLogout }) => {
         projectName: formData.projectName,
         projectNo: formData.projectNo,
         projectDate: new Date(formData.projectDate),
+        status: formData.status,
         supplier: {
           proformaInvoice: {
             supplierName: formData.supplierName,
@@ -387,6 +389,8 @@ const AdminDashboard = ({ user, onLogout }) => {
       projectName: '',
       projectNo: '',
       projectDate: '',
+      status: 'Active',  // ADD THIS LINE
+      
       supplierName: '',
       supplierInvoiceNumber: '',
       supplierInvoiceAmount: '',
@@ -447,6 +451,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       projectName: project.projectName,
       projectNo: project.projectNo,
       projectDate: project.projectDate?.split('T')[0] || '',
+      status: project.status || 'Active',
       supplierName: project.supplier?.proformaInvoice?.supplierName || '',
       supplierInvoiceNumber: project.supplier?.proformaInvoice?.invoiceNumber || '',
       supplierInvoiceAmount: (project.supplier?.proformaInvoice?.invoiceAmount || 0).toString(),
@@ -801,6 +806,35 @@ const AdminDashboard = ({ user, onLogout }) => {
                       required
                       disabled={loading}
                     />
+                  </div>
+
+                  {/* ADD THIS STATUS FIELD */}
+                  <div className="form-group">
+                    <label>Project Status *</label>
+                    <div className="status-checkbox-group">
+                      <label className="status-checkbox-label">
+                        <input
+                          type="radio"
+                          name="status"
+                          value="Active"
+                          checked={formData.status === 'Active'}
+                          onChange={handleChange}
+                          disabled={loading}
+                        />
+                        <span className="status-badge status-active">✓ Active</span>
+                      </label>
+                      <label className="status-checkbox-label">
+                        <input
+                          type="radio"
+                          name="status"
+                          value="Inactive"
+                          checked={formData.status === 'Inactive'}
+                          onChange={handleChange}
+                          disabled={loading}
+                        />
+                        <span className="status-badge status-inactive">✕ Inactive</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1693,6 +1727,13 @@ const AdminDashboard = ({ user, onLogout }) => {
                     📅 {new Date(project.projectDate).toLocaleDateString()}
                   </div>
 
+                  {/* Status Badge */}
+                  <div className="project-status-badge">
+                    <span className={`status-badge ${project.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
+                      {project.status === 'Active' ? '✓ Active' : '✕ Inactive'}
+                    </span>
+                  </div>
+
                   {/* Quick Summary */}
 <div className="project-quick-summary">
   <div className="summary-item">
@@ -1982,7 +2023,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       <span>Foreign Bank Charges:</span>
       <span className="value">${project.costing?.foreignBankCharges?.toFixed(2) || '0.00'}</span>
     </div>
-    <div className="detail-row">
+    <div className="detail-subsection">
       <span>Loan Interest:</span>
       <span className="value">${project.costing?.loanInterest?.toFixed(2) || '0.00'}</span>
     </div>

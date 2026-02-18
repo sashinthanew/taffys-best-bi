@@ -17,6 +17,14 @@ const projectSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Project date is required']
   },
+  
+  // Project Status
+  status: {
+    type: String,
+    enum: ['Active', 'Inactive'],
+    default: 'Active',
+    required: true
+  },
 
   // Supplier Section
   supplier: {

@@ -29,10 +29,11 @@ router.get('/export/excel', auth, async (req, res) => {
 
     // Define ALL columns with their keys FIRST - This is critical!
     worksheet.columns = [
-      // Project Info (3)
+      // Project Info (4) - UPDATE COUNT FROM 3 TO 4
       { header: 'Project No', key: 'projectNo', width: 15 },
       { header: 'Project Name', key: 'projectName', width: 25 },
       { header: 'Project Date', key: 'projectDate', width: 15 },
+      { header: 'Status', key: 'status', width: 12 },  // ADD THIS LINE
       
       // Supplier - Proforma Invoice (5)
       { header: 'Supplier Name', key: 'supplierName', width: 20 },
@@ -145,6 +146,7 @@ router.get('/export/excel', auth, async (req, res) => {
         projectNo: project.projectNo || '',
         projectName: project.projectName || '',
         projectDate: project.projectDate ? new Date(project.projectDate).toLocaleDateString() : '',
+        status: project.status || '',
         
         // Supplier - Proforma Invoice
         supplierName: project.supplier?.proformaInvoice?.supplierName || '',
@@ -223,8 +225,8 @@ router.get('/export/excel', auth, async (req, res) => {
     headerRow.height = 35;
     
     const colorMap = [
-      // Project (3) - Gray
-      'FF4A5568', 'FF4A5568', 'FF4A5568',
+      // Project (4) - Gray  // UPDATE COMMENT FROM 3 TO 4
+      'FF4A5568', 'FF4A5568', 'FF4A5568', 'FF4A5568',  // ADD ONE MORE
       // Supplier Proforma (5) - Green shades
       'FF10B981', 'FF10B981', 'FF10B981', 'FF10B981', 'FF10B981',
       // Supplier Advance (6) - Darker green
@@ -292,8 +294,8 @@ router.get('/export/excel', auth, async (req, res) => {
           };
         }
 
-        // NET PROFIT column highlighting (last column = 52)
-        if (colNumber === 52) {
+        // NET PROFIT column highlighting (last column = 53)
+        if (colNumber === 53) {
           const netProfit = cell.value || 0;
           if (netProfit >= 0) {
             cell.font = { bold: true, color: { argb: 'FF047857' }, size: 11 };
@@ -322,24 +324,33 @@ router.get('/export/excel', auth, async (req, res) => {
     // Auto-filter on header
     worksheet.autoFilter = {
       from: { row: 1, column: 1 },
-      to: { row: 1, column: 52 }
+      to: { row: 1, column: 53 }
     };
 
     console.log('Generating Excel file...');
 
-    // Generate Excel file
+    // Generate Excel file to buffer first (more reliable than streaming)
+    const buffer = await workbook.xlsx.writeBuffer();
+    
+    console.log(`Excel buffer created, size: ${buffer.length} bytes`);
+
+    // Set headers and send buffer
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=TWL_Projects_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    res.setHeader('Content-Length', buffer.length);
 
-    await workbook.xlsx.write(res);
-    res.end();
+    res.send(buffer);
 
     console.log('Excel export completed successfully');
 
   } catch (error) {
     console.error('Error exporting to Excel:', error);
     console.error('Stack trace:', error.stack);
-    res.status(500).json({ success: false, message: 'Failed to export to Excel', error: error.message });
+    
+    // Only send JSON error if headers haven't been sent yet
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: 'Failed to export to Excel', error: error.message });
+    }
   }
 });
 

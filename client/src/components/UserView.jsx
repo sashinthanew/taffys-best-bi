@@ -30,13 +30,15 @@ ChartJS.register(
 
 const UserView = ({ user, onLogout }) => {
   const [projects, setProjects] = useState([]);
+  const [impactAnalysis, setImpactAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'details'
+  const [viewMode, setViewMode] = useState('overview'); // 'overview', 'details', or 'impact'
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'Active', 'Inactive'
 
   useEffect(() => {
     fetchProjects();
+    fetchImpactAnalysis();
   }, []);
 
   const fetchProjects = async () => {
@@ -63,6 +65,24 @@ const UserView = ({ user, onLogout }) => {
     }
   };
 
+  const fetchImpactAnalysis = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/projects/analysis/impact`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setImpactAnalysis(data.analysis);
+      }
+    } catch (error) {
+      console.error('Error fetching impact analysis:', error);
+    }
+  };
+
   // Filter projects based on status
   const getFilteredProjects = () => {
     if (statusFilter === 'all') return projects;
@@ -74,25 +94,53 @@ const UserView = ({ user, onLogout }) => {
   // Calculate overview statistics
   const getOverviewStats = () => {
     const totalProjects = filteredProjects.length;
-    const activeProjects = projects.filter(p => p.status === 'Active').length;
-    const inactiveProjects = projects.filter(p => p.status === 'Inactive').length;
+    const activeProjectsList = projects.filter(p => p.status === 'Active');
+    const inactiveProjectsList = projects.filter(p => p.status === 'Inactive');
+    const activeProjects = activeProjectsList.length;
+    const inactiveProjects = inactiveProjectsList.length;
+    
+    // Total calculations
     const totalIncome = filteredProjects.reduce((sum, p) => sum + (p.buyer?.summary?.totalReceived || 0), 0);
     const totalOutcome = filteredProjects.reduce((sum, p) => sum + (p.supplier?.summary?.totalAmount || 0), 0);
     const totalLoans = filteredProjects.reduce((sum, p) => sum + (p.supplier?.advancePayment?.loanAmount || 0), 0);
     const totalNetProfit = filteredProjects.reduce((sum, p) => sum + (p.costing?.netProfit || 0), 0);
     const totalTWLReceived = filteredProjects.reduce((sum, p) => sum + (p.buyer?.advancePayment?.twlReceived || 0) + (p.buyer?.balancePayment?.twlReceived || 0), 0);
 
+    // Active projects calculations
+    const activeIncome = activeProjectsList.reduce((sum, p) => sum + (p.buyer?.summary?.totalReceived || 0), 0);
+    const activeOutcome = activeProjectsList.reduce((sum, p) => sum + (p.supplier?.summary?.totalAmount || 0), 0);
+    const activeLoans = activeProjectsList.reduce((sum, p) => sum + (p.supplier?.advancePayment?.loanAmount || 0), 0);
+    const activeNetProfit = activeProjectsList.reduce((sum, p) => sum + (p.costing?.netProfit || 0), 0);
+    const activeTWLReceived = activeProjectsList.reduce((sum, p) => sum + (p.buyer?.advancePayment?.twlReceived || 0) + (p.buyer?.balancePayment?.twlReceived || 0), 0);
+
+    // Inactive projects calculations
+    const inactiveIncome = inactiveProjectsList.reduce((sum, p) => sum + (p.buyer?.summary?.totalReceived || 0), 0);
+    const inactiveOutcome = inactiveProjectsList.reduce((sum, p) => sum + (p.supplier?.summary?.totalAmount || 0), 0);
+    const inactiveLoans = inactiveProjectsList.reduce((sum, p) => sum + (p.supplier?.advancePayment?.loanAmount || 0), 0);
+    const inactiveNetProfit = inactiveProjectsList.reduce((sum, p) => sum + (p.costing?.netProfit || 0), 0);
+    const inactiveTWLReceived = inactiveProjectsList.reduce((sum, p) => sum + (p.buyer?.advancePayment?.twlReceived || 0) + (p.buyer?.balancePayment?.twlReceived || 0), 0);
+
     return {
       totalProjects,
-      activeProjects,
-      inactiveProjects,
       activeProjects,
       inactiveProjects,
       totalIncome,
       totalOutcome,
       totalLoans,
       totalNetProfit,
-      totalTWLReceived
+      totalTWLReceived,
+      // Active project details
+      activeIncome,
+      activeOutcome,
+      activeLoans,
+      activeNetProfit,
+      activeTWLReceived,
+      // Inactive project details
+      inactiveIncome,
+      inactiveOutcome,
+      inactiveLoans,
+      inactiveNetProfit,
+      inactiveTWLReceived
     };
   };
 
@@ -383,6 +431,12 @@ const UserView = ({ user, onLogout }) => {
           >
             📋 All Project Details
           </button>
+          <button 
+            className={`toggle-btn ${viewMode === 'impact' ? 'active' : ''}`}
+            onClick={() => setViewMode('impact')}
+          >
+            💡 Impact Analysis
+          </button>
         </div>
 
         {/* Status Filter */}
@@ -477,6 +531,114 @@ const UserView = ({ user, onLogout }) => {
                 <div className="stat-content">
                   <h3>Net Profit</h3>
                   <p className="stat-value">${stats.totalNetProfit.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Active vs Inactive Projects Breakdown */}
+            <div className="breakdown-section">
+              <h3 className="breakdown-title">📊 Active vs Inactive Projects Breakdown</h3>
+              
+              <div className="breakdown-grid">
+                {/* Active Projects Column */}
+                <div className="breakdown-column active-column">
+                  <div className="breakdown-header">
+                    <h4>✓ Active Projects ({stats.activeProjects})</h4>
+                  </div>
+                  <div className="breakdown-stats">
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">💰 Income</span>
+                      <span className="breakdown-value success">${stats.activeIncome.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">💸 Outcome</span>
+                      <span className="breakdown-value danger">${stats.activeOutcome.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">🏦 Loans</span>
+                      <span className="breakdown-value warning">${stats.activeLoans.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">📥 TWL Received</span>
+                      <span className="breakdown-value info">${stats.activeTWLReceived.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-stat-item highlight">
+                      <span className="breakdown-label">📈 Net Profit</span>
+                      <span className={`breakdown-value ${stats.activeNetProfit >= 0 ? 'success' : 'danger'}`}>
+                        ${stats.activeNetProfit.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Inactive Projects Column */}
+                <div className="breakdown-column inactive-column">
+                  <div className="breakdown-header">
+                    <h4>✕ Inactive Projects ({stats.inactiveProjects})</h4>
+                  </div>
+                  <div className="breakdown-stats">
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">💰 Income</span>
+                      <span className="breakdown-value success">${stats.inactiveIncome.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">💸 Outcome</span>
+                      <span className="breakdown-value danger">${stats.inactiveOutcome.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">🏦 Loans</span>
+                      <span className="breakdown-value warning">${stats.inactiveLoans.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">📥 TWL Received</span>
+                      <span className="breakdown-value info">${stats.inactiveTWLReceived.toFixed(2)}</span>
+                    </div>
+                    <div className="breakdown-stat-item highlight">
+                      <span className="breakdown-label">📈 Net Profit</span>
+                      <span className={`breakdown-value ${stats.inactiveNetProfit >= 0 ? 'success' : 'danger'}`}>
+                        ${stats.inactiveNetProfit.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Net Values Column (Active - Inactive) */}
+                <div className="breakdown-column net-column">
+                  <div className="breakdown-header">
+                    <h4>💼 Net Values (Active - Inactive)</h4>
+                  </div>
+                  <div className="breakdown-stats">
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">💰 Income</span>
+                      <span className={`breakdown-value ${(stats.activeIncome - stats.inactiveIncome) >= 0 ? 'success' : 'danger'}`}>
+                        ${(stats.activeIncome - stats.inactiveIncome).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">💸 Outcome</span>
+                      <span className={`breakdown-value ${(stats.activeOutcome - stats.inactiveOutcome) >= 0 ? 'danger' : 'success'}`}>
+                        ${(stats.activeOutcome - stats.inactiveOutcome).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">🏦 Loans</span>
+                      <span className="breakdown-value warning">
+                        ${(stats.activeLoans - stats.inactiveLoans).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="breakdown-stat-item">
+                      <span className="breakdown-label">📥 TWL Received</span>
+                      <span className="breakdown-value info">
+                        ${(stats.activeTWLReceived - stats.inactiveTWLReceived).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="breakdown-stat-item highlight">
+                      <span className="breakdown-label">📈 Net Profit</span>
+                      <span className={`breakdown-value ${(stats.activeNetProfit - stats.inactiveNetProfit) >= 0 ? 'success' : 'danger'}`}>
+                        ${(stats.activeNetProfit - stats.inactiveNetProfit).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -693,6 +855,303 @@ const UserView = ({ user, onLogout }) => {
                   })}
                 </div>
               )}
+            </div>
+          </>
+        )}
+
+        {/* Impact Analysis Mode */}
+        {viewMode === 'impact' && impactAnalysis && (
+          <>
+            <div className="impact-analysis-section">
+              <h2>📊 Company Impact Analysis</h2>
+              <p className="section-description">
+                Comprehensive analysis of how each project contributes to company performance
+              </p>
+
+              {/* Company-Wide Metrics */}
+              <div className="company-metrics-section">
+                <h3>🏢 Company-Wide Metrics</h3>
+                <div className="stats-grid">
+                  <div className="stat-card primary">
+                    <div className="stat-icon">💰</div>
+                    <div className="stat-content">
+                      <h4>Total Revenue</h4>
+                      <p className="stat-value">${impactAnalysis.companyMetrics.totalRevenue.toFixed(2)}</p>
+                      <small>Active: ${impactAnalysis.companyMetrics.activeRevenue.toFixed(2)}</small>
+                    </div>
+                  </div>
+
+                  <div className="stat-card success">
+                    <div className="stat-icon">📈</div>
+                    <div className="stat-content">
+                      <h4>Total Net Profit</h4>
+                      <p className={`stat-value ${impactAnalysis.companyMetrics.totalProfit >= 0 ? 'success' : 'danger'}`}>
+                        ${impactAnalysis.companyMetrics.totalProfit.toFixed(2)}
+                      </p>
+                      <small>Active: ${impactAnalysis.companyMetrics.activeProfit.toFixed(2)}</small>
+                    </div>
+                  </div>
+
+                  <div className="stat-card info">
+                    <div className="stat-icon">📊</div>
+                    <div className="stat-content">
+                      <h4>Average ROI</h4>
+                      <p className="stat-value">{impactAnalysis.companyMetrics.averageROI.toFixed(2)}%</p>
+                      <small>Return on Investment</small>
+                    </div>
+                  </div>
+
+                  <div className="stat-card warning">
+                    <div className="stat-icon">💼</div>
+                    <div className="stat-content">
+                      <h4>Profit Margin</h4>
+                      <p className="stat-value">{impactAnalysis.companyMetrics.averageProfitMargin.toFixed(2)}%</p>
+                      <small>Average across projects</small>
+                    </div>
+                  </div>
+
+                  <div className="stat-card danger">
+                    <div className="stat-icon">⚠️</div>
+                    <div className="stat-content">
+                      <h4>Risk Exposure</h4>
+                      <p className="stat-value">${impactAnalysis.companyMetrics.totalRiskExposure.toFixed(2)}</p>
+                      <small>{impactAnalysis.companyMetrics.riskAssessment.highRiskCount} High Risk Projects</small>
+                    </div>
+                  </div>
+
+                  <div className={`stat-card ${impactAnalysis.companyMetrics.companyHealth === 'Healthy' ? 'success' : 'warning'}`}>
+                    <div className="stat-icon">🏥</div>
+                    <div className="stat-content">
+                      <h4>Company Health</h4>
+                      <p className="stat-value">{impactAnalysis.companyMetrics.companyHealth}</p>
+                      <small>Impact Score: {impactAnalysis.companyMetrics.averageImpactScore.toFixed(2)}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Top Performers */}
+              <div className="top-performers-section">
+                <h3>🏆 Top Performing Projects</h3>
+                <div className="performers-grid">
+                  <div className="performers-card">
+                    <h4>💰 By Net Profit</h4>
+                    <div className="performers-list">
+                      {impactAnalysis.companyMetrics.topPerformers.byProfit.map((project, index) => (
+                        <div key={index} className="performer-item">
+                          <span className="rank">#{index + 1}</span>
+                          <span className="project-info">
+                            <strong>{project.projectNo}</strong> - {project.projectName}
+                          </span>
+                          <span className="performer-value success">
+                            ${project.netProfit.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="performers-card">
+                    <h4>📊 By Impact Score</h4>
+                    <div className="performers-list">
+                      {impactAnalysis.companyMetrics.topPerformers.byImpact.map((project, index) => (
+                        <div key={index} className="performer-item">
+                          <span className="rank">#{index + 1}</span>
+                          <span className="project-info">
+                            <strong>{project.projectNo}</strong> - {project.projectName}
+                          </span>
+                          <span className="performer-value info">
+                            {project.impactScore.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* High Risk Projects */}
+              {impactAnalysis.companyMetrics.riskAssessment.highRiskProjects.length > 0 && (
+                <div className="risk-projects-section">
+                  <h3>⚠️ High Risk Projects</h3>
+                  <div className="risk-list">
+                    {impactAnalysis.companyMetrics.riskAssessment.highRiskProjects.map((project, index) => (
+                      <div key={index} className={`risk-item risk-${project.riskLevel.toLowerCase()}`}>
+                        <div className="risk-header">
+                          <span className="project-info">
+                            <strong>{project.projectNo}</strong> - {project.projectName}
+                          </span>
+                          <span className={`risk-badge ${project.riskLevel.toLowerCase()}`}>
+                            {project.riskLevel} Risk
+                          </span>
+                        </div>
+                        <div className="risk-score">
+                          Risk Score: <strong>{project.riskScore.toFixed(2)}</strong>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Individual Project Impact Analysis */}
+              <div className="project-impact-section">
+                <h3>📋 Individual Project Impact Analysis</h3>
+                
+                {/* Filter by status */}
+                <div className="impact-filter">
+                  <label>Filter by Status:</label>
+                  <select 
+                    value={statusFilter} 
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="filter-select"
+                  >
+                    <option value="all">All Projects</option>
+                    <option value="Active">Active Only</option>
+                    <option value="Inactive">Inactive Only</option>
+                  </select>
+                </div>
+
+                <div className="impact-projects-grid">
+                  {impactAnalysis.projects
+                    .filter(p => statusFilter === 'all' || p.status === statusFilter)
+                    .map((project) => (
+                    <div key={project.projectId} className="impact-project-card">
+                      {/* Project Header */}
+                      <div className="project-header">
+                        <div className="header-left">
+                          <h4>{project.projectName}</h4>
+                          <span className={`status-badge ${project.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
+                            {project.status === 'Active' ? '✓ Active' : '✕ Inactive'}
+                          </span>
+                        </div>
+                        <div className="project-meta">
+                          <span className="project-no">{project.projectNo}</span>
+                          <span className="project-age">{project.metrics.projectAge} days old</span>
+                        </div>
+                      </div>
+
+                      {/* Impact Score Card */}
+                      <div className={`impact-score-card ${
+                        project.metrics.impactLevel === 'Very Positive' ? 'very-positive' :
+                        project.metrics.impactLevel === 'Positive' ? 'positive' :
+                        project.metrics.impactLevel === 'Negative' ? 'negative' : 'neutral'
+                      }`}>
+                        <div className="impact-label">Company Impact</div>
+                        <div className="impact-value">{project.metrics.impactScore.toFixed(2)}</div>
+                        <div className="impact-level">{project.metrics.impactLevel}</div>
+                      </div>
+
+                      {/* Key Metrics Grid */}
+                      <div className="impact-metrics-grid">
+                        <div className="metric-item">
+                          <div className="metric-label">ROI</div>
+                          <div className={`metric-value ${project.metrics.roi >= 0 ? 'positive' : 'negative'}`}>
+                            {project.metrics.roi.toFixed(2)}%
+                          </div>
+                        </div>
+
+                        <div className="metric-item">
+                          <div className="metric-label">Profit Margin</div>
+                          <div className={`metric-value ${project.metrics.profitMargin >= 0 ? 'positive' : 'negative'}`}>
+                            {project.metrics.profitMargin.toFixed(2)}%
+                          </div>
+                        </div>
+
+                        <div className="metric-item">
+                          <div className="metric-label">Efficiency</div>
+                          <div className={`metric-value ${project.metrics.efficiencyScore >= 0 ? 'positive' : 'negative'}`}>
+                            {project.metrics.efficiencyScore.toFixed(2)}
+                          </div>
+                        </div>
+
+                        <div className="metric-item">
+                          <div className="metric-label">Risk Level</div>
+                          <div className={`metric-value risk-${project.metrics.riskLevel.toLowerCase()}`}>
+                            {project.metrics.riskLevel}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Financial Summary */}
+                      <div className="impact-financial">
+                        <h5>💰 Financial Summary</h5>
+                        <div className="financial-items">
+                          <div className="financial-item">
+                            <span>Revenue:</span>
+                            <span className="success">${project.financial.revenue.toFixed(2)}</span>
+                          </div>
+                          <div className="financial-item">
+                            <span>Cost:</span>
+                            <span className="danger">${project.financial.cost.toFixed(2)}</span>
+                          </div>
+                          <div className="financial-item">
+                            <span>Net Profit:</span>
+                            <span className={project.financial.netProfit >= 0 ? 'success' : 'danger'}>
+                              ${project.financial.netProfit.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="financial-item">
+                            <span>Investment:</span>
+                            <span className="warning">${project.financial.investment.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Contribution to Company */}
+                      <div className="impact-contribution">
+                        <h5>📊 Contribution to Company</h5>
+                        <div className="contribution-bars">
+                          <div className="contribution-item">
+                            <span className="contribution-label">Revenue Share:</span>
+                            <div className="contribution-bar-container">
+                              <div 
+                                className="contribution-bar revenue" 
+                                style={{width: `${Math.min(project.contribution.revenuePercentage, 100)}%`}}
+                              ></div>
+                            </div>
+                            <span className="contribution-value">{project.contribution.revenuePercentage.toFixed(1)}%</span>
+                          </div>
+
+                          <div className="contribution-item">
+                            <span className="contribution-label">Profit Share:</span>
+                            <div className="contribution-bar-container">
+                              <div 
+                                className={`contribution-bar ${project.contribution.profit >= 0 ? 'profit-positive' : 'profit-negative'}`}
+                                style={{width: `${Math.min(Math.abs(project.contribution.profitPercentage), 100)}%`}}
+                              ></div>
+                            </div>
+                            <span className="contribution-value">{project.contribution.profitPercentage.toFixed(1)}%</span>
+                          </div>
+
+                          <div className="contribution-item">
+                            <span className="contribution-label">Cost Share:</span>
+                            <div className="contribution-bar-container">
+                              <div 
+                                className="contribution-bar cost" 
+                                style={{width: `${Math.min(project.contribution.costPercentage, 100)}%`}}
+                              ></div>
+                            </div>
+                            <span className="contribution-value">{project.contribution.costPercentage.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Parties Info */}
+                      <div className="impact-parties">
+                        <div className="party-item">
+                          <span>🏭 Supplier:</span>
+                          <span>{project.supplier}</span>
+                        </div>
+                        <div className="party-item">
+                          <span>🛒 Buyer:</span>
+                          <span>{project.buyer}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </>
         )}

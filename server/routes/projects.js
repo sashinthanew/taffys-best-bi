@@ -218,6 +218,341 @@ router.get('/export/excel', auth, async (req, res) => {
       });
     });
 
+    console.log('Calculating and adding totals...');
+
+    // Calculate totals for Active and Inactive projects separately
+    const activeProjects = projects.filter(p => p.status === 'Active');
+    const inactiveProjects = projects.filter(p => p.status === 'Inactive');
+    
+    const calculateTotals = (projectList) => {
+      return projectList.reduce((totals, project) => {
+        // Supplier values
+        totals.supplierInvoiceAmount += parseFloat(project.supplier?.proformaInvoice?.invoiceAmount) || 0;
+        totals.supplierCreditNote += parseFloat(project.supplier?.proformaInvoice?.creditNote) || 0;
+        totals.supplierFinalInvoice += parseFloat(project.supplier?.proformaInvoice?.finalInvoiceAmount) || 0;
+        totals.loanAmount += parseFloat(project.supplier?.advancePayment?.loanAmount) || 0;
+        totals.twlContributionAdv += parseFloat(project.supplier?.advancePayment?.twlContribution) || 0;
+        totals.totalPaymentAdv += parseFloat(project.supplier?.advancePayment?.totalPayment) || 0;
+        totals.balanceAmountAdv += parseFloat(project.supplier?.advancePayment?.balanceAmount) || 0;
+        totals.supplierBalanceLoanAmount += parseFloat(project.supplier?.balancePayment?.loanAmount) || 0;
+        totals.twlContributionBal += parseFloat(project.supplier?.balancePayment?.twlContribution) || 0;
+        totals.totalPaymentBal += parseFloat(project.supplier?.balancePayment?.totalPayment) || 0;
+        
+        const advTotal = parseFloat(project.supplier?.advancePayment?.totalPayment) || 0;
+        const balTotal = parseFloat(project.supplier?.balancePayment?.totalPayment) || 0;
+        totals.supplierTotalAmount += advTotal + balTotal;
+        totals.supplierCancelAmount += parseFloat(project.supplier?.summary?.cancelAmount) || 0;
+        
+        const finalInv = parseFloat(project.supplier?.proformaInvoice?.finalInvoiceAmount) || 0;
+        totals.supplierBalancePayment += finalInv - (advTotal + balTotal);
+        
+        // Buyer values
+        totals.twlInvoiceAmount += parseFloat(project.buyer?.proformaInvoice?.twlInvoiceAmount) || 0;
+        totals.buyerCreditNote += parseFloat(project.buyer?.proformaInvoice?.creditNote) || 0;
+        totals.bankInterest += parseFloat(project.buyer?.proformaInvoice?.bankInterest) || 0;
+        totals.freightCharges += parseFloat(project.buyer?.proformaInvoice?.freightCharges) || 0;
+        totals.commission += parseFloat(project.buyer?.proformaInvoice?.commission) || 0;
+        totals.buyerFinalInvoice += parseFloat(project.buyer?.proformaInvoice?.finalInvoiceAmount) || 0;
+        totals.buyerAdvanceTwl += parseFloat(project.buyer?.advancePayment?.twlReceived) || 0;
+        totals.buyerAdvanceBalance += parseFloat(project.buyer?.advancePayment?.balanceAmount) || 0;
+        totals.buyerBalanceTwl += parseFloat(project.buyer?.balancePayment?.twlReceived) || 0;
+        totals.buyerTotalReceived += parseFloat(project.buyer?.summary?.totalReceived) || 0;
+        totals.buyerCancel += parseFloat(project.buyer?.summary?.cancel) || 0;
+        totals.buyerBalanceReceived += parseFloat(project.buyer?.summary?.balanceReceived) || 0;
+        
+        // Costing values
+        const supplierInv = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+        const twlInv = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+        totals.costingSupplierInvoice += supplierInv;
+        totals.costingTwlInvoice += twlInv;
+        totals.profit += (twlInv - supplierInv);
+        totals.inGoing += parseFloat(project.costing?.inGoing) || 0;
+        totals.outGoing += parseFloat(project.costing?.outGoing) || 0;
+        totals.calCharges += parseFloat(project.costing?.calCharges) || 0;
+        totals.other += parseFloat(project.costing?.other) || 0;
+        totals.foreignBankCharges += parseFloat(project.costing?.foreignBankCharges) || 0;
+        totals.loanInterest += parseFloat(project.costing?.loanInterest) || 0;
+        totals.freightChargesCost += parseFloat(project.costing?.freightCharges) || 0;
+        
+        return totals;
+      }, {
+        supplierInvoiceAmount: 0, supplierCreditNote: 0, supplierFinalInvoice: 0,
+        loanAmount: 0, twlContributionAdv: 0, totalPaymentAdv: 0, balanceAmountAdv: 0,
+        supplierBalanceLoanAmount: 0, twlContributionBal: 0, totalPaymentBal: 0,
+        supplierTotalAmount: 0, supplierCancelAmount: 0, supplierBalancePayment: 0,
+        twlInvoiceAmount: 0, buyerCreditNote: 0, bankInterest: 0, freightCharges: 0,
+        commission: 0, buyerFinalInvoice: 0, buyerAdvanceTwl: 0, buyerAdvanceBalance: 0,
+        buyerBalanceTwl: 0, buyerTotalReceived: 0, buyerCancel: 0, buyerBalanceReceived: 0,
+        costingSupplierInvoice: 0, costingTwlInvoice: 0, profit: 0, inGoing: 0,
+        outGoing: 0, calCharges: 0, other: 0, foreignBankCharges: 0, loanInterest: 0,
+        freightChargesCost: 0
+      });
+    };
+    
+    const activeTotals = calculateTotals(activeProjects);
+    const inactiveTotals = calculateTotals(inactiveProjects);
+    
+    // Calculate total expenses and net profit for each
+    activeTotals.totalExpenses = activeTotals.inGoing + activeTotals.outGoing + activeTotals.calCharges + 
+                                  activeTotals.other + activeTotals.foreignBankCharges + activeTotals.loanInterest + 
+                                  activeTotals.freightChargesCost;
+    activeTotals.netProfit = activeTotals.profit - activeTotals.totalExpenses;
+    
+    inactiveTotals.totalExpenses = inactiveTotals.inGoing + inactiveTotals.outGoing + inactiveTotals.calCharges + 
+                                    inactiveTotals.other + inactiveTotals.foreignBankCharges + inactiveTotals.loanInterest + 
+                                    inactiveTotals.freightChargesCost;
+    inactiveTotals.netProfit = inactiveTotals.profit - inactiveTotals.totalExpenses;
+    
+    // Add empty row before totals
+    worksheet.addRow({});
+    
+    // Add Active Total row
+    const activeTotalRow = worksheet.addRow({
+      projectNo: '',
+      projectName: '',
+      projectDate: '',
+      status: `ACTIVE TOTAL (${activeProjects.length} projects)`,
+      supplierInvoiceAmount: activeTotals.supplierInvoiceAmount,
+      supplierCreditNote: activeTotals.supplierCreditNote,
+      supplierFinalInvoice: activeTotals.supplierFinalInvoice,
+      loanAmount: activeTotals.loanAmount,
+      twlContributionAdv: activeTotals.twlContributionAdv,
+      totalPaymentAdv: activeTotals.totalPaymentAdv,
+      balanceAmountAdv: activeTotals.balanceAmountAdv,
+      supplierBalanceLoanAmount: activeTotals.supplierBalanceLoanAmount,
+      twlContributionBal: activeTotals.twlContributionBal,
+      totalPaymentBal: activeTotals.totalPaymentBal,
+      supplierTotalAmount: activeTotals.supplierTotalAmount,
+      supplierCancelAmount: activeTotals.supplierCancelAmount,
+      supplierBalancePayment: activeTotals.supplierBalancePayment,
+      twlInvoiceAmount: activeTotals.twlInvoiceAmount,
+      buyerCreditNote: activeTotals.buyerCreditNote,
+      bankInterest: activeTotals.bankInterest,
+      freightCharges: activeTotals.freightCharges,
+      commission: activeTotals.commission,
+      buyerFinalInvoice: activeTotals.buyerFinalInvoice,
+      buyerAdvanceTwl: activeTotals.buyerAdvanceTwl,
+      buyerAdvanceBalance: activeTotals.buyerAdvanceBalance,
+      buyerBalanceTwl: activeTotals.buyerBalanceTwl,
+      buyerTotalReceived: activeTotals.buyerTotalReceived,
+      buyerCancel: activeTotals.buyerCancel,
+      buyerBalanceReceived: activeTotals.buyerBalanceReceived,
+      costingSupplierInvoice: activeTotals.costingSupplierInvoice,
+      costingTwlInvoice: activeTotals.costingTwlInvoice,
+      profit: activeTotals.profit,
+      inGoing: activeTotals.inGoing,
+      outGoing: activeTotals.outGoing,
+      calCharges: activeTotals.calCharges,
+      other: activeTotals.other,
+      foreignBankCharges: activeTotals.foreignBankCharges,
+      loanInterest: activeTotals.loanInterest,
+      freightChargesCost: activeTotals.freightChargesCost,
+      totalExpenses: activeTotals.totalExpenses,
+      netProfit: activeTotals.netProfit
+    });
+    
+    // Add Inactive Total row (if there are inactive projects)
+    let inactiveTotalRow;
+    if (inactiveProjects.length > 0) {
+      inactiveTotalRow = worksheet.addRow({
+        projectNo: '',
+        projectName: '',
+        projectDate: '',
+        status: `INACTIVE TOTAL (${inactiveProjects.length} projects)`,
+        supplierInvoiceAmount: inactiveTotals.supplierInvoiceAmount,
+        supplierCreditNote: inactiveTotals.supplierCreditNote,
+        supplierFinalInvoice: inactiveTotals.supplierFinalInvoice,
+        loanAmount: inactiveTotals.loanAmount,
+        twlContributionAdv: inactiveTotals.twlContributionAdv,
+        totalPaymentAdv: inactiveTotals.totalPaymentAdv,
+        balanceAmountAdv: inactiveTotals.balanceAmountAdv,
+        supplierBalanceLoanAmount: inactiveTotals.supplierBalanceLoanAmount,
+        twlContributionBal: inactiveTotals.twlContributionBal,
+        totalPaymentBal: inactiveTotals.totalPaymentBal,
+        supplierTotalAmount: inactiveTotals.supplierTotalAmount,
+        supplierCancelAmount: inactiveTotals.supplierCancelAmount,
+        supplierBalancePayment: inactiveTotals.supplierBalancePayment,
+        twlInvoiceAmount: inactiveTotals.twlInvoiceAmount,
+        buyerCreditNote: inactiveTotals.buyerCreditNote,
+        bankInterest: inactiveTotals.bankInterest,
+        freightCharges: inactiveTotals.freightCharges,
+        commission: inactiveTotals.commission,
+        buyerFinalInvoice: inactiveTotals.buyerFinalInvoice,
+        buyerAdvanceTwl: inactiveTotals.buyerAdvanceTwl,
+        buyerAdvanceBalance: inactiveTotals.buyerAdvanceBalance,
+        buyerBalanceTwl: inactiveTotals.buyerBalanceTwl,
+        buyerTotalReceived: inactiveTotals.buyerTotalReceived,
+        buyerCancel: inactiveTotals.buyerCancel,
+        buyerBalanceReceived: inactiveTotals.buyerBalanceReceived,
+        costingSupplierInvoice: inactiveTotals.costingSupplierInvoice,
+        costingTwlInvoice: inactiveTotals.costingTwlInvoice,
+        profit: inactiveTotals.profit,
+        inGoing: inactiveTotals.inGoing,
+        outGoing: inactiveTotals.outGoing,
+        calCharges: inactiveTotals.calCharges,
+        other: inactiveTotals.other,
+        foreignBankCharges: inactiveTotals.foreignBankCharges,
+        loanInterest: inactiveTotals.loanInterest,
+        freightChargesCost: inactiveTotals.freightChargesCost,
+        totalExpenses: inactiveTotals.totalExpenses,
+        netProfit: inactiveTotals.netProfit
+      });
+    }
+    
+    // Calculate Grand Total (Active - Inactive)
+    const grandTotal = {
+      supplierInvoiceAmount: activeTotals.supplierInvoiceAmount - inactiveTotals.supplierInvoiceAmount,
+      supplierCreditNote: activeTotals.supplierCreditNote - inactiveTotals.supplierCreditNote,
+      supplierFinalInvoice: activeTotals.supplierFinalInvoice - inactiveTotals.supplierFinalInvoice,
+      loanAmount: activeTotals.loanAmount - inactiveTotals.loanAmount,
+      twlContributionAdv: activeTotals.twlContributionAdv - inactiveTotals.twlContributionAdv,
+      totalPaymentAdv: activeTotals.totalPaymentAdv - inactiveTotals.totalPaymentAdv,
+      balanceAmountAdv: activeTotals.balanceAmountAdv - inactiveTotals.balanceAmountAdv,
+      supplierBalanceLoanAmount: activeTotals.supplierBalanceLoanAmount - inactiveTotals.supplierBalanceLoanAmount,
+      twlContributionBal: activeTotals.twlContributionBal - inactiveTotals.twlContributionBal,
+      totalPaymentBal: activeTotals.totalPaymentBal - inactiveTotals.totalPaymentBal,
+      supplierTotalAmount: activeTotals.supplierTotalAmount - inactiveTotals.supplierTotalAmount,
+      supplierCancelAmount: activeTotals.supplierCancelAmount - inactiveTotals.supplierCancelAmount,
+      supplierBalancePayment: activeTotals.supplierBalancePayment - inactiveTotals.supplierBalancePayment,
+      twlInvoiceAmount: activeTotals.twlInvoiceAmount - inactiveTotals.twlInvoiceAmount,
+      buyerCreditNote: activeTotals.buyerCreditNote - inactiveTotals.buyerCreditNote,
+      bankInterest: activeTotals.bankInterest - inactiveTotals.bankInterest,
+      freightCharges: activeTotals.freightCharges - inactiveTotals.freightCharges,
+      commission: activeTotals.commission - inactiveTotals.commission,
+      buyerFinalInvoice: activeTotals.buyerFinalInvoice - inactiveTotals.buyerFinalInvoice,
+      buyerAdvanceTwl: activeTotals.buyerAdvanceTwl - inactiveTotals.buyerAdvanceTwl,
+      buyerAdvanceBalance: activeTotals.buyerAdvanceBalance - inactiveTotals.buyerAdvanceBalance,
+      buyerBalanceTwl: activeTotals.buyerBalanceTwl - inactiveTotals.buyerBalanceTwl,
+      buyerTotalReceived: activeTotals.buyerTotalReceived - inactiveTotals.buyerTotalReceived,
+      buyerCancel: activeTotals.buyerCancel - inactiveTotals.buyerCancel,
+      buyerBalanceReceived: activeTotals.buyerBalanceReceived - inactiveTotals.buyerBalanceReceived,
+      costingSupplierInvoice: activeTotals.costingSupplierInvoice - inactiveTotals.costingSupplierInvoice,
+      costingTwlInvoice: activeTotals.costingTwlInvoice - inactiveTotals.costingTwlInvoice,
+      profit: activeTotals.profit - inactiveTotals.profit,
+      inGoing: activeTotals.inGoing - inactiveTotals.inGoing,
+      outGoing: activeTotals.outGoing - inactiveTotals.outGoing,
+      calCharges: activeTotals.calCharges - inactiveTotals.calCharges,
+      other: activeTotals.other - inactiveTotals.other,
+      foreignBankCharges: activeTotals.foreignBankCharges - inactiveTotals.foreignBankCharges,
+      loanInterest: activeTotals.loanInterest - inactiveTotals.loanInterest,
+      freightChargesCost: activeTotals.freightChargesCost - inactiveTotals.freightChargesCost,
+      totalExpenses: activeTotals.totalExpenses - inactiveTotals.totalExpenses,
+      netProfit: activeTotals.netProfit - inactiveTotals.netProfit
+    };
+    
+    // Add Grand Total row
+    const grandTotalRow = worksheet.addRow({
+      projectNo: '',
+      projectName: '',
+      projectDate: '',
+      status: `GRAND TOTAL (${projects.length} projects)`,
+      supplierInvoiceAmount: grandTotal.supplierInvoiceAmount,
+      supplierCreditNote: grandTotal.supplierCreditNote,
+      supplierFinalInvoice: grandTotal.supplierFinalInvoice,
+      loanAmount: grandTotal.loanAmount,
+      twlContributionAdv: grandTotal.twlContributionAdv,
+      totalPaymentAdv: grandTotal.totalPaymentAdv,
+      balanceAmountAdv: grandTotal.balanceAmountAdv,
+      supplierBalanceLoanAmount: grandTotal.supplierBalanceLoanAmount,
+      twlContributionBal: grandTotal.twlContributionBal,
+      totalPaymentBal: grandTotal.totalPaymentBal,
+      supplierTotalAmount: grandTotal.supplierTotalAmount,
+      supplierCancelAmount: grandTotal.supplierCancelAmount,
+      supplierBalancePayment: grandTotal.supplierBalancePayment,
+      twlInvoiceAmount: grandTotal.twlInvoiceAmount,
+      buyerCreditNote: grandTotal.buyerCreditNote,
+      bankInterest: grandTotal.bankInterest,
+      freightCharges: grandTotal.freightCharges,
+      commission: grandTotal.commission,
+      buyerFinalInvoice: grandTotal.buyerFinalInvoice,
+      buyerAdvanceTwl: grandTotal.buyerAdvanceTwl,
+      buyerAdvanceBalance: grandTotal.buyerAdvanceBalance,
+      buyerBalanceTwl: grandTotal.buyerBalanceTwl,
+      buyerTotalReceived: grandTotal.buyerTotalReceived,
+      buyerCancel: grandTotal.buyerCancel,
+      buyerBalanceReceived: grandTotal.buyerBalanceReceived,
+      costingSupplierInvoice: grandTotal.costingSupplierInvoice,
+      costingTwlInvoice: grandTotal.costingTwlInvoice,
+      profit: grandTotal.profit,
+      inGoing: grandTotal.inGoing,
+      outGoing: grandTotal.outGoing,
+      calCharges: grandTotal.calCharges,
+      other: grandTotal.other,
+      foreignBankCharges: grandTotal.foreignBankCharges,
+      loanInterest: grandTotal.loanInterest,
+      freightChargesCost: grandTotal.freightChargesCost,
+      totalExpenses: grandTotal.totalExpenses,
+      netProfit: grandTotal.netProfit
+    });
+
+    // Style Active Total row
+    activeTotalRow.eachCell((cell, colNumber) => {
+      cell.font = { bold: true, color: { argb: 'FF047857' }, size: 11 };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFD1FAE5' }
+      };
+      cell.border = {
+        top: { style: 'medium', color: { argb: 'FF000000' } },
+        bottom: { style: 'thin', color: { argb: 'FF000000' } },
+        left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        right: { style: 'thin', color: { argb: 'FFD1D5DB' } }
+      };
+      if (typeof cell.value === 'number') {
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.numFmt = '$#,##0.00';
+      } else {
+        cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      }
+    });
+    
+    // Style Inactive Total row (if exists)
+    if (inactiveTotalRow) {
+      inactiveTotalRow.eachCell((cell, colNumber) => {
+        cell.font = { bold: true, color: { argb: 'FFDC2626' }, size: 11 };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFEF2F2' }
+        };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FF000000' } },
+          bottom: { style: 'thin', color: { argb: 'FF000000' } },
+          left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+          right: { style: 'thin', color: { argb: 'FFD1D5DB' } }
+        };
+        if (typeof cell.value === 'number') {
+          cell.alignment = { vertical: 'middle', horizontal: 'right' };
+          cell.numFmt = '$#,##0.00';
+        } else {
+          cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        }
+      });
+    }
+    
+    // Style Grand Total row
+    grandTotalRow.eachCell((cell, colNumber) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1F2937' }
+      };
+      cell.border = {
+        top: { style: 'medium', color: { argb: 'FF000000' } },
+        bottom: { style: 'medium', color: { argb: 'FF000000' } },
+        left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        right: { style: 'thin', color: { argb: 'FFD1D5DB' } }
+      };
+      if (typeof cell.value === 'number') {
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.numFmt = '$#,##0.00';
+      } else {
+        cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      }
+    });
+
     console.log('Adding section headers...');
 
     // Insert a row at the top for section headers
@@ -309,8 +644,12 @@ router.get('/export/excel', auth, async (req, res) => {
     });
 
     // Style data rows
+    const totalRowsCount = inactiveProjects.length > 0 ? 4 : 3; // Empty row + Active + Inactive (optional) + Grand Total
+    const lastDataRow = worksheet.rowCount - totalRowsCount;
+    
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber <= 2) return; // Skip section header and column header rows
+      if (rowNumber > lastDataRow) return; // Skip total rows (already styled)
       
       row.height = 25;
       row.eachCell((cell, colNumber) => {
@@ -484,6 +823,226 @@ router.delete('/:id', auth, async (req, res) => {
     res.json({ success: true, message: 'Project deleted successfully' });
   } catch (error) {
     console.error('Error deleting project:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get impact analysis for all projects
+router.get('/analysis/impact', auth, async (req, res) => {
+  try {
+    console.log('Impact analysis route hit');
+    
+    const projects = await Project.find().sort({ projectDate: -1 });
+    
+    if (projects.length === 0) {
+      return res.json({ 
+        success: true, 
+        analysis: {
+          projects: [],
+          companyMetrics: {
+            totalProjects: 0,
+            activeProjects: 0,
+            inactiveProjects: 0,
+            totalRevenue: 0,
+            totalCost: 0,
+            totalProfit: 0,
+            averageROI: 0,
+            averageProfitMargin: 0,
+            totalRiskExposure: 0
+          }
+        }
+      });
+    }
+
+    // Calculate impact metrics for each project
+    const projectsWithImpact = projects.map(project => {
+      // Financial calculations
+      const revenue = parseFloat(project.buyer?.summary?.totalReceived) || 0;
+      const cost = parseFloat(project.supplier?.summary?.totalAmount) || 0;
+      const netProfit = parseFloat(project.costing?.netProfit) || 0;
+      const totalInvestment = parseFloat(project.supplier?.advancePayment?.loanAmount) || 0 + 
+                             parseFloat(project.supplier?.advancePayment?.twlContribution) || 0;
+      
+      // ROI Calculation: (Net Profit / Total Investment) * 100
+      const roi = totalInvestment > 0 ? ((netProfit / totalInvestment) * 100) : 0;
+      
+      // Profit Margin: (Net Profit / Revenue) * 100
+      const profitMargin = revenue > 0 ? ((netProfit / revenue) * 100) : 0;
+      
+      // Efficiency Score: How much profit per dollar spent (Net Profit / Cost)
+      const efficiencyScore = cost > 0 ? (netProfit / cost) : 0;
+      
+      // Project Value: Combined revenue and profit importance
+      const projectValue = revenue + Math.abs(netProfit);
+      
+      // Risk Score based on various factors
+      let riskScore = 0;
+      if (project.status === 'Inactive') riskScore += 40;
+      if (netProfit < 0) riskScore += 30;
+      if (profitMargin < 10) riskScore += 15;
+      if (revenue === 0) riskScore += 15;
+      
+      // Risk Level
+      let riskLevel = 'Low';
+      if (riskScore >= 60) riskLevel = 'High';
+      else if (riskScore >= 30) riskLevel = 'Medium';
+      
+      // Impact Score: Combination of profitability, efficiency, and value
+      // Higher score means more positive impact to company
+      let impactScore = 0;
+      impactScore += (netProfit > 0 ? 30 : -20); // Profitability weight
+      impactScore += Math.min(roi / 2, 20); // ROI contribution (max 20 points)
+      impactScore += Math.min(efficiencyScore * 10, 20); // Efficiency (max 20 points)
+      impactScore += Math.min((projectValue / 10000), 20); // Value contribution (max 20 points)
+      impactScore += (project.status === 'Active' ? 10 : -10); // Status weight
+      
+      // Impact Level
+      let impactLevel = 'Neutral';
+      if (impactScore >= 60) impactLevel = 'Very Positive';
+      else if (impactScore >= 30) impactLevel = 'Positive';
+      else if (impactScore <= -20) impactLevel = 'Negative';
+      
+      // Calculate contribution percentage (will be calculated after aggregation)
+      const contribution = {
+        revenue: revenue,
+        profit: netProfit,
+        cost: cost
+      };
+      
+      // Time-based metrics
+      const projectAge = project.projectDate ? 
+        Math.floor((new Date() - new Date(project.projectDate)) / (1000 * 60 * 60 * 24)) : 0;
+      
+      return {
+        projectId: project._id,
+        projectNo: project.projectNo,
+        projectName: project.projectName,
+        projectDate: project.projectDate,
+        status: project.status,
+        supplier: project.supplier?.proformaInvoice?.supplierName || 'N/A',
+        buyer: project.buyer?.proformaInvoice?.buyerName || 'N/A',
+        financial: {
+          revenue,
+          cost,
+          netProfit,
+          investment: totalInvestment,
+          expenses: parseFloat(project.costing?.total) || 0
+        },
+        metrics: {
+          roi: parseFloat(roi.toFixed(2)),
+          profitMargin: parseFloat(profitMargin.toFixed(2)),
+          efficiencyScore: parseFloat(efficiencyScore.toFixed(2)),
+          impactScore: parseFloat(impactScore.toFixed(2)),
+          impactLevel,
+          riskScore: parseFloat(riskScore.toFixed(2)),
+          riskLevel,
+          projectAge
+        },
+        contribution
+      };
+    });
+
+    // Calculate company-wide metrics
+    const activeProjects = projectsWithImpact.filter(p => p.status === 'Active');
+    const inactiveProjects = projectsWithImpact.filter(p => p.status === 'Inactive');
+    
+    const totalRevenue = projectsWithImpact.reduce((sum, p) => sum + p.financial.revenue, 0);
+    const totalCost = projectsWithImpact.reduce((sum, p) => sum + p.financial.cost, 0);
+    const totalProfit = projectsWithImpact.reduce((sum, p) => sum + p.financial.netProfit, 0);
+    const totalInvestment = projectsWithImpact.reduce((sum, p) => sum + p.financial.investment, 0);
+    
+    const activeRevenue = activeProjects.reduce((sum, p) => sum + p.financial.revenue, 0);
+    const activeProfit = activeProjects.reduce((sum, p) => sum + p.financial.netProfit, 0);
+    const inactiveProfit = inactiveProjects.reduce((sum, p) => sum + p.financial.netProfit, 0);
+    
+    const averageROI = projectsWithImpact.length > 0 ?
+      projectsWithImpact.reduce((sum, p) => sum + p.metrics.roi, 0) / projectsWithImpact.length : 0;
+    
+    const averageProfitMargin = projectsWithImpact.length > 0 ?
+      projectsWithImpact.reduce((sum, p) => sum + p.metrics.profitMargin, 0) / projectsWithImpact.length : 0;
+    
+    const totalRiskExposure = projectsWithImpact.reduce((sum, p) => 
+      sum + (p.metrics.riskLevel === 'High' ? p.financial.cost : 0), 0);
+    
+    const averageImpactScore = projectsWithImpact.length > 0 ?
+      projectsWithImpact.reduce((sum, p) => sum + p.metrics.impactScore, 0) / projectsWithImpact.length : 0;
+    
+    // Calculate contribution percentages
+    projectsWithImpact.forEach(project => {
+      project.contribution.revenuePercentage = totalRevenue > 0 ? 
+        parseFloat(((project.contribution.revenue / totalRevenue) * 100).toFixed(2)) : 0;
+      project.contribution.profitPercentage = totalProfit !== 0 ? 
+        parseFloat(((project.contribution.profit / totalProfit) * 100).toFixed(2)) : 0;
+      project.contribution.costPercentage = totalCost > 0 ? 
+        parseFloat(((project.contribution.cost / totalCost) * 100).toFixed(2)) : 0;
+    });
+    
+    // Top performers
+    const topProfitableProjects = [...projectsWithImpact]
+      .sort((a, b) => b.financial.netProfit - a.financial.netProfit)
+      .slice(0, 5);
+    
+    const highImpactProjects = [...projectsWithImpact]
+      .sort((a, b) => b.metrics.impactScore - a.metrics.impactScore)
+      .slice(0, 5);
+    
+    const highRiskProjects = [...projectsWithImpact]
+      .filter(p => p.metrics.riskLevel === 'High' || p.metrics.riskLevel === 'Medium')
+      .sort((a, b) => b.metrics.riskScore - a.metrics.riskScore);
+
+    const companyMetrics = {
+      totalProjects: projects.length,
+      activeProjects: activeProjects.length,
+      inactiveProjects: inactiveProjects.length,
+      totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+      totalCost: parseFloat(totalCost.toFixed(2)),
+      totalProfit: parseFloat(totalProfit.toFixed(2)),
+      totalInvestment: parseFloat(totalInvestment.toFixed(2)),
+      activeRevenue: parseFloat(activeRevenue.toFixed(2)),
+      activeProfit: parseFloat(activeProfit.toFixed(2)),
+      inactiveProfit: parseFloat(inactiveProfit.toFixed(2)),
+      averageROI: parseFloat(averageROI.toFixed(2)),
+      averageProfitMargin: parseFloat(averageProfitMargin.toFixed(2)),
+      averageImpactScore: parseFloat(averageImpactScore.toFixed(2)),
+      totalRiskExposure: parseFloat(totalRiskExposure.toFixed(2)),
+      companyHealth: totalProfit > 0 ? 'Healthy' : 'Needs Attention',
+      topPerformers: {
+        byProfit: topProfitableProjects.map(p => ({
+          projectNo: p.projectNo,
+          projectName: p.projectName,
+          netProfit: p.financial.netProfit
+        })),
+        byImpact: highImpactProjects.map(p => ({
+          projectNo: p.projectNo,
+          projectName: p.projectName,
+          impactScore: p.metrics.impactScore
+        }))
+      },
+      riskAssessment: {
+        highRiskCount: highRiskProjects.filter(p => p.metrics.riskLevel === 'High').length,
+        mediumRiskCount: highRiskProjects.filter(p => p.metrics.riskLevel === 'Medium').length,
+        totalRiskExposure: parseFloat(totalRiskExposure.toFixed(2)),
+        highRiskProjects: highRiskProjects.slice(0, 5).map(p => ({
+          projectNo: p.projectNo,
+          projectName: p.projectName,
+          riskLevel: p.metrics.riskLevel,
+          riskScore: p.metrics.riskScore
+        }))
+      }
+    };
+
+    console.log('Impact analysis completed successfully');
+    
+    res.json({
+      success: true,
+      analysis: {
+        projects: projectsWithImpact,
+        companyMetrics
+      }
+    });
+
+  } catch (error) {
+    console.error('Error calculating impact analysis:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

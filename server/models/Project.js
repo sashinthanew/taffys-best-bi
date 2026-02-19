@@ -47,7 +47,7 @@ const projectSchema = new mongoose.Schema({
     },
     // Balance Payment
     balancePayment: {
-      amount: { type: Number, default: 0 },
+      loanAmount: { type: Number, default: 0 },
       date: { type: Date },
       reference: { type: String, trim: true },
       twlContribution: { type: Number, default: 0 },

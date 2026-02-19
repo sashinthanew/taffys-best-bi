@@ -26,7 +26,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     balanceAmount: '',
     
     // Supplier - Balance Payment
-    supplierBalanceAmount: '',
+    supplierBalanceLoanAmount: '',
     supplierBalanceDate: '',
     supplierBalanceReference: '',
     supplierBalanceTwlContribution: '',
@@ -203,6 +203,18 @@ const AdminDashboard = ({ user, onLogout }) => {
     }));
   }, [formData.supplierInvoiceAmount, formData.creditNote]);
 
+  // Auto-calculate supplier balance payment total payment
+  useEffect(() => {
+    const balanceLoan = parseFloat(formData.supplierBalanceLoanAmount) || 0;
+    const balanceTwl = parseFloat(formData.supplierBalanceTwlContribution) || 0;
+    const balanceTotal = balanceLoan + balanceTwl;
+    
+    setFormData(prev => ({
+      ...prev,
+      supplierBalanceTotalPayment: balanceTotal.toFixed(2)
+    }));
+  }, [formData.supplierBalanceLoanAmount, formData.supplierBalanceTwlContribution]);
+
   // Auto-calculate supplier summary
   useEffect(() => {
     const advanceTotalPayment = parseFloat(formData.totalPayment) || 0;
@@ -293,7 +305,7 @@ const AdminDashboard = ({ user, onLogout }) => {
             balanceAmount: parseFloat(formData.balanceAmount) || 0
           },
           balancePayment: {
-            amount: parseFloat(formData.supplierBalanceAmount) || 0,
+            loanAmount: parseFloat(formData.supplierBalanceLoanAmount) || 0,
             date: formData.supplierBalanceDate ? new Date(formData.supplierBalanceDate) : null,
             reference: formData.supplierBalanceReference,
             twlContribution: parseFloat(formData.supplierBalanceTwlContribution) || 0,
@@ -402,7 +414,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       twlContribution: '',
       totalPayment: '',
       balanceAmount: '',
-      supplierBalanceAmount: '',
+      supplierBalanceLoanAmount: '',
       supplierBalanceDate: '',
       supplierBalanceReference: '',
       supplierBalanceTwlContribution: '',
@@ -463,7 +475,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       twlContribution: (project.supplier?.advancePayment?.twlContribution || 0).toString(),
       totalPayment: (project.supplier?.advancePayment?.totalPayment || 0).toString(),
       balanceAmount: (project.supplier?.advancePayment?.balanceAmount || 0).toString(),
-      supplierBalanceAmount: (project.supplier?.balancePayment?.amount || 0).toString(),
+      supplierBalanceLoanAmount: (project.supplier?.balancePayment?.loanAmount || 0).toString(),
       supplierBalanceDate: project.supplier?.balancePayment?.date?.split('T')[0] || '',
       supplierBalanceReference: project.supplier?.balancePayment?.reference || '',
       supplierBalanceTwlContribution: (project.supplier?.balancePayment?.twlContribution || 0).toString(),
@@ -1002,11 +1014,11 @@ const AdminDashboard = ({ user, onLogout }) => {
                   <h4 className="subsection-title">Balance Payment</h4>
                   <div className="form-grid">
                     <div className="form-group">
-                      <label>Amount ($)</label>
+                      <label>Loan Amount ($)</label>
                       <input
                         type="number"
-                        name="supplierBalanceAmount"
-                        value={formData.supplierBalanceAmount}
+                        name="supplierBalanceLoanAmount"
+                        value={formData.supplierBalanceLoanAmount}
                         onChange={handleChange}
                         placeholder="0.00"
                         step="0.01"
@@ -1053,16 +1065,15 @@ const AdminDashboard = ({ user, onLogout }) => {
                     </div>
 
                     <div className="form-group">
-                      <label>Total Payment ($)</label>
+                      <label>Total Payment ($) <span className="auto-calc">Auto-calculated</span></label>
                       <input
                         type="number"
                         name="supplierBalanceTotalPayment"
                         value={formData.supplierBalanceTotalPayment}
-                        onChange={handleChange}
+                        readOnly
                         placeholder="0.00"
-                        step="0.01"
-                        min="0"
-                        disabled={loading}
+                        disabled
+                        className="readonly-field"
                       />
                     </div>
                   </div>

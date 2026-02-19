@@ -51,7 +51,7 @@ router.get('/export/excel', auth, async (req, res) => {
       { header: 'Balance Amount (Adv)', key: 'balanceAmountAdv', width: 18 },
       
       // Supplier - Balance Payment (5)
-      { header: 'Supplier Balance Amt', key: 'supplierBalanceAmount', width: 18 },
+      { header: 'Supplier Balance Loan Amt', key: 'supplierBalanceLoanAmount', width: 20 },
       { header: 'Supplier Balance Date', key: 'supplierBalanceDate', width: 18 },
       { header: 'Supplier Balance Ref', key: 'supplierBalanceRef', width: 18 },
       { header: 'TWL Contribution (Bal)', key: 'twlContributionBal', width: 20 },
@@ -164,11 +164,11 @@ router.get('/export/excel', auth, async (req, res) => {
         balanceAmountAdv: project.supplier?.advancePayment?.balanceAmount || 0,
         
         // Supplier - Balance Payment
-        supplierBalanceAmount: project.supplier?.balancePayment?.amount || 0,
+        supplierBalanceLoanAmount: project.supplier?.balancePayment?.loanAmount || 0,
         supplierBalanceDate: project.supplier?.balancePayment?.date ? new Date(project.supplier.balancePayment.date).toLocaleDateString() : '',
         supplierBalanceRef: project.supplier?.balancePayment?.reference || '',
         twlContributionBal: project.supplier?.balancePayment?.twlContribution || 0,
-        totalPaymentBal: storedBalanceTotalPayment,  // Use stored value (manual entry)
+        totalPaymentBal: storedBalanceTotalPayment,  // Auto-calculated: Loan Amount + TWL Contribution
         
         // Supplier - Summary
         supplierTotalAmount: calculatedSupplierTotalAmount,  // ✅ Calculated: Advance Total + Balance Total
@@ -218,10 +218,55 @@ router.get('/export/excel', auth, async (req, res) => {
       });
     });
 
+    console.log('Adding section headers...');
+
+    // Insert a row at the top for section headers
+    worksheet.spliceRows(1, 0, []);
+    
+    // Define section header ranges (column positions)
+    const sections = [
+      { start: 1, end: 4, title: 'PROJECT INFO' },
+      { start: 5, end: 9, title: 'SUPPLIER - PROFORMA INVOICE' },
+      { start: 10, end: 15, title: 'SUPPLIER - ADVANCE PAYMENT' },
+      { start: 16, end: 20, title: 'SUPPLIER - BALANCE PAYMENT' },
+      { start: 21, end: 23, title: 'SUPPLIER - SUMMARY' },
+      { start: 24, end: 32, title: 'BUYER - PROFORMA INVOICE' },
+      { start: 33, end: 36, title: 'BUYER - ADVANCE PAYMENT' },
+      { start: 37, end: 39, title: 'BUYER - BALANCE PAYMENT' },
+      { start: 40, end: 42, title: 'BUYER - SUMMARY' },
+      { start: 43, end: 54, title: 'COSTING' }
+    ];
+
+    // Add section headers with merged cells
+    const sectionRow = worksheet.getRow(1);
+    sectionRow.height = 30;
+    
+    sections.forEach(section => {
+      // Merge cells for this section
+      worksheet.mergeCells(1, section.start, 1, section.end);
+      
+      // Style the merged cell
+      const cell = worksheet.getCell(1, section.start);
+      cell.value = section.title;
+      cell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1F2937' } // Dark gray background
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.border = {
+        top: { style: 'medium', color: { argb: 'FF000000' } },
+        bottom: { style: 'medium', color: { argb: 'FF000000' } },
+        left: { style: 'medium', color: { argb: 'FF000000' } },
+        right: { style: 'medium', color: { argb: 'FF000000' } }
+      };
+    });
+
     console.log('Styling the worksheet...');
 
-    // Style header row (row 1) with colors
-    const headerRow = worksheet.getRow(1);
+    // Style column header row (now row 2) with colors
+    const headerRow = worksheet.getRow(2);
     headerRow.height = 35;
     
     const colorMap = [
@@ -265,7 +310,7 @@ router.get('/export/excel', auth, async (req, res) => {
 
     // Style data rows
     worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return; // Skip header
+      if (rowNumber <= 2) return; // Skip section header and column header rows
       
       row.height = 25;
       row.eachCell((cell, colNumber) => {
@@ -285,8 +330,8 @@ router.get('/export/excel', auth, async (req, res) => {
           cell.alignment = { vertical: 'middle', horizontal: 'left' };
         }
 
-        // Alternate row colors
-        if (rowNumber % 2 === 0) {
+        // Alternate row colors (data rows start at 3, so adjust logic)
+        if ((rowNumber - 2) % 2 === 0) {
           cell.fill = {
             type: 'pattern',
             pattern: 'solid',
@@ -294,8 +339,8 @@ router.get('/export/excel', auth, async (req, res) => {
           };
         }
 
-        // NET PROFIT column highlighting (last column = 53)
-        if (colNumber === 53) {
+        // NET PROFIT column highlighting (last column = 54)
+        if (colNumber === 54) {
           const netProfit = cell.value || 0;
           if (netProfit >= 0) {
             cell.font = { bold: true, color: { argb: 'FF047857' }, size: 11 };
@@ -316,15 +361,15 @@ router.get('/export/excel', auth, async (req, res) => {
       });
     });
 
-    // Freeze panes (header row)
+    // Freeze panes (section header and column header rows)
     worksheet.views = [
-      { state: 'frozen', ySplit: 1 }
+      { state: 'frozen', ySplit: 2 }
     ];
 
-    // Auto-filter on header
+    // Auto-filter on column headers (row 2)
     worksheet.autoFilter = {
-      from: { row: 1, column: 1 },
-      to: { row: 1, column: 53 }
+      from: { row: 2, column: 1 },
+      to: { row: 2, column: 54 }
     };
 
     console.log('Generating Excel file...');

@@ -399,53 +399,53 @@ router.get('/export/excel', auth, async (req, res) => {
       });
     }
     
-    // Calculate Grand Total (Active - Inactive)
+    // Calculate Grand Total (Active + Inactive) - CHANGED CALCULATION
     const grandTotal = {
-      supplierInvoiceAmount: activeTotals.supplierInvoiceAmount - inactiveTotals.supplierInvoiceAmount,
-      supplierCreditNote: activeTotals.supplierCreditNote - inactiveTotals.supplierCreditNote,
-      supplierFinalInvoice: activeTotals.supplierFinalInvoice - inactiveTotals.supplierFinalInvoice,
-      loanAmount: activeTotals.loanAmount - inactiveTotals.loanAmount,
-      twlContributionAdv: activeTotals.twlContributionAdv - inactiveTotals.twlContributionAdv,
-      totalPaymentAdv: activeTotals.totalPaymentAdv - inactiveTotals.totalPaymentAdv,
-      balanceAmountAdv: activeTotals.balanceAmountAdv - inactiveTotals.balanceAmountAdv,
-      supplierBalanceLoanAmount: activeTotals.supplierBalanceLoanAmount - inactiveTotals.supplierBalanceLoanAmount,
-      twlContributionBal: activeTotals.twlContributionBal - inactiveTotals.twlContributionBal,
-      totalPaymentBal: activeTotals.totalPaymentBal - inactiveTotals.totalPaymentBal,
-      supplierTotalAmount: activeTotals.supplierTotalAmount - inactiveTotals.supplierTotalAmount,
-      supplierCancelAmount: activeTotals.supplierCancelAmount - inactiveTotals.supplierCancelAmount,
-      supplierBalancePayment: activeTotals.supplierBalancePayment - inactiveTotals.supplierBalancePayment,
-      twlInvoiceAmount: activeTotals.twlInvoiceAmount - inactiveTotals.twlInvoiceAmount,
-      buyerCreditNote: activeTotals.buyerCreditNote - inactiveTotals.buyerCreditNote,
-      bankInterest: activeTotals.bankInterest - inactiveTotals.bankInterest,
-      freightCharges: activeTotals.freightCharges - inactiveTotals.freightCharges,
-      commission: activeTotals.commission - inactiveTotals.commission,
-      buyerFinalInvoice: activeTotals.buyerFinalInvoice - inactiveTotals.buyerFinalInvoice,
-      buyerAdvanceTwl: activeTotals.buyerAdvanceTwl - inactiveTotals.buyerAdvanceTwl,
-      buyerAdvanceBalance: activeTotals.buyerAdvanceBalance - inactiveTotals.buyerAdvanceBalance,
-      buyerBalanceTwl: activeTotals.buyerBalanceTwl - inactiveTotals.buyerBalanceTwl,
-      buyerTotalReceived: activeTotals.buyerTotalReceived - inactiveTotals.buyerTotalReceived,
-      buyerCancel: activeTotals.buyerCancel - inactiveTotals.buyerCancel,
-      buyerBalanceReceived: activeTotals.buyerBalanceReceived - inactiveTotals.buyerBalanceReceived,
-      costingSupplierInvoice: activeTotals.costingSupplierInvoice - inactiveTotals.costingSupplierInvoice,
-      costingTwlInvoice: activeTotals.costingTwlInvoice - inactiveTotals.costingTwlInvoice,
-      profit: activeTotals.profit - inactiveTotals.profit,
-      inGoing: activeTotals.inGoing - inactiveTotals.inGoing,
-      outGoing: activeTotals.outGoing - inactiveTotals.outGoing,
-      calCharges: activeTotals.calCharges - inactiveTotals.calCharges,
-      other: activeTotals.other - inactiveTotals.other,
-      foreignBankCharges: activeTotals.foreignBankCharges - inactiveTotals.foreignBankCharges,
-      loanInterest: activeTotals.loanInterest - inactiveTotals.loanInterest,
-      freightChargesCost: activeTotals.freightChargesCost - inactiveTotals.freightChargesCost,
-      totalExpenses: activeTotals.totalExpenses - inactiveTotals.totalExpenses,
-      netProfit: activeTotals.netProfit - inactiveTotals.netProfit
+      supplierInvoiceAmount: activeTotals.supplierInvoiceAmount + inactiveTotals.supplierInvoiceAmount,
+      supplierCreditNote: activeTotals.supplierCreditNote + inactiveTotals.supplierCreditNote,
+      supplierFinalInvoice: activeTotals.supplierFinalInvoice + inactiveTotals.supplierFinalInvoice,
+      loanAmount: activeTotals.loanAmount + inactiveTotals.loanAmount,
+      twlContributionAdv: activeTotals.twlContributionAdv + inactiveTotals.twlContributionAdv,
+      totalPaymentAdv: activeTotals.totalPaymentAdv + inactiveTotals.totalPaymentAdv,
+      balanceAmountAdv: activeTotals.balanceAmountAdv + inactiveTotals.balanceAmountAdv,
+      supplierBalanceLoanAmount: activeTotals.supplierBalanceLoanAmount + inactiveTotals.supplierBalanceLoanAmount,
+      twlContributionBal: activeTotals.twlContributionBal + inactiveTotals.twlContributionBal,
+      totalPaymentBal: activeTotals.totalPaymentBal + inactiveTotals.totalPaymentBal,
+      supplierTotalAmount: activeTotals.supplierTotalAmount + inactiveTotals.supplierTotalAmount,
+      supplierCancelAmount: activeTotals.supplierCancelAmount + inactiveTotals.supplierCancelAmount,
+      supplierBalancePayment: activeTotals.supplierBalancePayment + inactiveTotals.supplierBalancePayment,
+      twlInvoiceAmount: activeTotals.twlInvoiceAmount + inactiveTotals.twlInvoiceAmount,
+      buyerCreditNote: activeTotals.buyerCreditNote + inactiveTotals.buyerCreditNote,
+      bankInterest: activeTotals.bankInterest + inactiveTotals.bankInterest,
+      freightCharges: activeTotals.freightCharges + inactiveTotals.freightCharges,
+      commission: activeTotals.commission + inactiveTotals.commission,
+      buyerFinalInvoice: activeTotals.buyerFinalInvoice + inactiveTotals.buyerFinalInvoice,
+      buyerAdvanceTwl: activeTotals.buyerAdvanceTwl + inactiveTotals.buyerAdvanceTwl,
+      buyerAdvanceBalance: activeTotals.buyerAdvanceBalance + inactiveTotals.buyerAdvanceBalance,
+      buyerBalanceTwl: activeTotals.buyerBalanceTwl + inactiveTotals.buyerBalanceTwl,
+      buyerTotalReceived: activeTotals.buyerTotalReceived + inactiveTotals.buyerTotalReceived,
+      buyerCancel: activeTotals.buyerCancel + inactiveTotals.buyerCancel,
+      buyerBalanceReceived: activeTotals.buyerBalanceReceived + inactiveTotals.buyerBalanceReceived,
+      costingSupplierInvoice: activeTotals.costingSupplierInvoice + inactiveTotals.costingSupplierInvoice,
+      costingTwlInvoice: activeTotals.costingTwlInvoice + inactiveTotals.costingTwlInvoice,
+      profit: activeTotals.profit + inactiveTotals.profit,
+      inGoing: activeTotals.inGoing + inactiveTotals.inGoing,
+      outGoing: activeTotals.outGoing + inactiveTotals.outGoing,
+      calCharges: activeTotals.calCharges + inactiveTotals.calCharges,
+      other: activeTotals.other + inactiveTotals.other,
+      foreignBankCharges: activeTotals.foreignBankCharges + inactiveTotals.foreignBankCharges,
+      loanInterest: activeTotals.loanInterest + inactiveTotals.loanInterest,
+      freightChargesCost: activeTotals.freightChargesCost + inactiveTotals.freightChargesCost,
+      totalExpenses: activeTotals.totalExpenses + inactiveTotals.totalExpenses,
+      netProfit: activeTotals.netProfit + inactiveTotals.netProfit
     };
     
-    // Add Grand Total row
+    // Add Total row - CHANGED LABEL FROM "GRAND TOTAL" TO "TOTAL"
     const grandTotalRow = worksheet.addRow({
       projectNo: '',
       projectName: '',
       projectDate: '',
-      status: `GRAND TOTAL (${projects.length} projects)`,
+      status: `TOTAL (${projects.length} projects)`,
       supplierInvoiceAmount: grandTotal.supplierInvoiceAmount,
       supplierCreditNote: grandTotal.supplierCreditNote,
       supplierFinalInvoice: grandTotal.supplierFinalInvoice,
@@ -531,7 +531,7 @@ router.get('/export/excel', auth, async (req, res) => {
       });
     }
     
-    // Style Grand Total row
+    // Style Grand Total row - UPDATED COMMENT
     grandTotalRow.eachCell((cell, colNumber) => {
       cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
       cell.fill = {

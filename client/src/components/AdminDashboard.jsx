@@ -568,15 +568,16 @@ const AdminDashboard = ({ user, onLogout }) => {
   // Auto-calculate buyer advance balance amount
   useEffect(() => {
     const finalInvoice = parseFloat(formData.buyerFinalInvoiceAmount) || 0;
-    const twlReceived = parseFloat(formData.buyerAdvanceTwlReceived) || 0;
+    const advanceReceived = parseFloat(formData.buyerAdvanceTwlReceived) || 0;
     
-    const balanceAmount = finalInvoice - twlReceived;
+    // ✅ CORRECT LOGIC: Balance Amount = Final Invoice Amount - TWL Received
+    const balance = finalInvoice - advanceReceived;
     
     setFormData(prev => ({
       ...prev,
-      buyerAdvanceBalanceAmount: balanceAmount.toFixed(2)
+      buyerAdvanceBalanceAmount: balance.toFixed(2)
     }));
-  }, [formData.buyerFinalInvoiceAmount, formData.buyerAdvanceTwlReceived]);
+  }, [formData.buyerFinalInvoiceAmount, formData.buyerAdvanceTwlReceived]); // ✅ Changed dependencies
 
   // Auto-calculate buyer summary
   useEffect(() => {

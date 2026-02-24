@@ -10,13 +10,21 @@ router.get('/export/excel', auth, async (req, res) => {
     console.log('Excel export route hit');
     console.log('Starting Excel export...');
     
-    // Fetch all projects
-    const projects = await Project.find().sort({ projectDate: -1 });
+    // ✅ Check for filter parameter
+    const { projectUniqNo } = req.query;
+    let query = {};
+    
+    if (projectUniqNo && projectUniqNo.trim()) {
+      // Filter by project unique number (case-insensitive partial match)
+      query.projectUniqNo = { $regex: projectUniqNo.trim(), $options: 'i' };
+      console.log('Filtering by Project Unique No:', projectUniqNo.trim());
+    }
+    
+    const projects = await Project.find(query).sort({ projectUniqNo: 1, createdAt: -1 });
     console.log(`Found ${projects.length} projects to export`);
 
     if (projects.length === 0) {
-      console.log('No projects found');
-      return res.status(404).json({ success: false, message: 'No projects found to export' });
+      return res.status(404).json({ message: 'No projects found to export' });
     }
 
     const workbook = new ExcelJS.Workbook();
@@ -27,22 +35,23 @@ router.get('/export/excel', auth, async (req, res) => {
       pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true }
     });
 
-    // Define ALL columns with their keys FIRST - This is critical!
+    // Define ALL columns with their keys FIRST
     worksheet.columns = [
-      // Project Info (4) - UPDATE COUNT FROM 3 TO 4
+      // ✅ NEW: Project Unique Number as first column
+      { header: 'Project Uniq No', key: 'projectUniqNo', width: 15 },
       { header: 'Project No', key: 'projectNo', width: 15 },
       { header: 'Project Name', key: 'projectName', width: 25 },
-      { header: 'Project Date', key: 'projectDate', width: 15 },
-      { header: 'Status', key: 'status', width: 12 },  // ADD THIS LINE
+      { header: 'Project Date', key: 'projectDate', width: 12 },
+      { header: 'Status', key: 'status', width: 10 },
       
-      // Supplier - Proforma Invoice (5)
+      // Supplier - Proforma Invoice
       { header: 'Supplier Name', key: 'supplierName', width: 20 },
       { header: 'Supplier Invoice No', key: 'supplierInvoiceNo', width: 18 },
-      { header: 'Supplier Invoice Amt', key: 'supplierInvoiceAmount', width: 18 },
-      { header: 'Supplier Credit Note', key: 'supplierCreditNote', width: 18 },
-      { header: 'Supplier Final Invoice', key: 'supplierFinalInvoice', width: 20 },
+      { header: 'Supplier Invoice Amount', key: 'supplierInvoiceAmount', width: 18 },
+      { header: 'Credit Note', key: 'supplierCreditNote', width: 12 },
+      { header: 'Final Invoice Amount', key: 'supplierFinalInvoice', width: 18 },
       
-      // Supplier - Advance Payment (6)
+      // Supplier - Advance Payment
       { header: 'Loan Amount', key: 'loanAmount', width: 15 },
       { header: 'Advance Payment Date', key: 'advancePaymentDate', width: 18 },
       { header: 'Advance Reference', key: 'advanceReference', width: 18 },
@@ -50,19 +59,19 @@ router.get('/export/excel', auth, async (req, res) => {
       { header: 'Total Payment (Adv)', key: 'totalPaymentAdv', width: 18 },
       { header: 'Balance Amount (Adv)', key: 'balanceAmountAdv', width: 18 },
       
-      // Supplier - Balance Payment (5)
+      // Supplier - Balance Payment
       { header: 'Supplier Balance Loan Amt', key: 'supplierBalanceLoanAmount', width: 20 },
       { header: 'Supplier Balance Date', key: 'supplierBalanceDate', width: 18 },
       { header: 'Supplier Balance Ref', key: 'supplierBalanceRef', width: 18 },
       { header: 'TWL Contribution (Bal)', key: 'twlContributionBal', width: 20 },
       { header: 'Total Payment (Bal)', key: 'totalPaymentBal', width: 18 },
       
-      // Supplier - Summary (3)
+      // Supplier - Summary
       { header: 'Supplier Total Amt', key: 'supplierTotalAmount', width: 18 },
       { header: 'Supplier Cancel Amt', key: 'supplierCancelAmount', width: 18 },
       { header: 'Supplier Balance Pay', key: 'supplierBalancePayment', width: 20 },
       
-      // Buyer - Proforma Invoice (9)
+      // Buyer - Proforma Invoice
       { header: 'Buyer Name', key: 'buyerName', width: 20 },
       { header: 'Buyer Invoice No', key: 'buyerInvoiceNo', width: 18 },
       { header: 'Buyer Invoice Date', key: 'buyerInvoiceDate', width: 18 },
@@ -73,23 +82,23 @@ router.get('/export/excel', auth, async (req, res) => {
       { header: 'Commission', key: 'commission', width: 15 },
       { header: 'Buyer Final Invoice', key: 'buyerFinalInvoice', width: 18 },
       
-      // Buyer - Advance Payment (4)
+      // Buyer - Advance Payment
       { header: 'Buyer Advance TWL', key: 'buyerAdvanceTwl', width: 18 },
       { header: 'Buyer Advance Balance', key: 'buyerAdvanceBalance', width: 20 },
       { header: 'Buyer Advance Date', key: 'buyerAdvanceDate', width: 18 },
       { header: 'Buyer Advance Ref', key: 'buyerAdvanceRef', width: 18 },
       
-      // Buyer - Balance Payment (3)
+      // Buyer - Balance Payment
       { header: 'Buyer Balance TWL', key: 'buyerBalanceTwl', width: 18 },
       { header: 'Buyer Balance Date', key: 'buyerBalanceDate', width: 18 },
       { header: 'Buyer Balance Ref', key: 'buyerBalanceRef', width: 18 },
       
-      // Buyer - Summary (3)
+      // Buyer - Summary
       { header: 'Buyer Total Received', key: 'buyerTotalReceived', width: 18 },
       { header: 'Buyer Cancel', key: 'buyerCancel', width: 15 },
       { header: 'Buyer Balance Received', key: 'buyerBalanceReceived', width: 20 },
       
-      // Costing (12)
+      // Costing
       { header: 'Costing Supplier Inv', key: 'costingSupplierInvoice', width: 18 },
       { header: 'Costing TWL Invoice', key: 'costingTwlInvoice', width: 18 },
       { header: 'Profit', key: 'profit', width: 15 },
@@ -104,13 +113,24 @@ router.get('/export/excel', auth, async (req, res) => {
       { header: 'NET PROFIT', key: 'netProfit', width: 18 }
     ];
 
+    // Style header row
+    worksheet.getRow(1).font = { bold: true, size: 11 };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4472C4' }
+    };
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+    worksheet.getRow(1).height = 25;
+
     console.log('Adding project data to Excel...');
 
     // Add data rows - worksheet.addRow() will now automatically map by key
     projects.forEach((project, index) => {
       console.log(`Processing project ${index + 1}: ${project.projectName}`);
       
-      // Calculate values dynamically using the correct logic
+      // Calculate values dynamically
       const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
       const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
       const inGoing = parseFloat(project.costing?.inGoing) || 0;
@@ -121,61 +141,47 @@ router.get('/export/excel', auth, async (req, res) => {
       const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
       const freightChargesCost = parseFloat(project.costing?.freightCharges) || 0;
       
-      // Calculate profit: TWL Invoice - Supplier Invoice
       const calculatedProfit = twlInvoice - supplierInvoice;
-      
-      // Calculate total expenses
       const calculatedTotalExpenses = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freightChargesCost;
-      
-      // Calculate net profit: Profit - Total Expenses
       const calculatedNetProfit = calculatedProfit - calculatedTotalExpenses;
       
-      // Calculate supplier balance payment total (now manual entry, use stored value)
-      const storedBalanceTotalPayment = parseFloat(project.supplier?.balancePayment?.totalPayment) || 0;
+      const balanceLoanAmount = parseFloat(project.supplier?.balancePayment?.loanAmount) || 0;
+      const balanceTwlContribution = parseFloat(project.supplier?.balancePayment?.twlContribution) || 0;
+      const calculatedBalanceTotalPayment = balanceLoanAmount + balanceTwlContribution;
       
-      // Calculate supplier summary (Total Amount = Advance Total + Balance Total)
+      const supplierInvoiceAmount = parseFloat(project.supplier?.proformaInvoice?.invoiceAmount) || 0;
+      const supplierCancelAmount = parseFloat(project.supplier?.summary?.cancelAmount) || 0;
+      const calculatedSupplierTotalAmount = supplierInvoiceAmount - supplierCancelAmount;
+      
       const advanceTotalPayment = parseFloat(project.supplier?.advancePayment?.totalPayment) || 0;
-      const calculatedSupplierTotalAmount = advanceTotalPayment + storedBalanceTotalPayment;
-      
-      // Calculate supplier summary balance payment (Final Invoice - Total Amount)
-      const finalInvoiceAmount = parseFloat(project.supplier?.proformaInvoice?.finalInvoiceAmount) || 0;
-      const calculatedSupplierBalancePayment = finalInvoiceAmount - calculatedSupplierTotalAmount;
+      const totalPaidToSupplier = advanceTotalPayment + calculatedBalanceTotalPayment;
+      const calculatedSupplierBalancePayment = calculatedSupplierTotalAmount - totalPaidToSupplier;
       
       worksheet.addRow({
-        // Project Info
+        projectUniqNo: project.projectUniqNo || '',  // ✅ NEW: First column
         projectNo: project.projectNo || '',
         projectName: project.projectName || '',
         projectDate: project.projectDate ? new Date(project.projectDate).toLocaleDateString() : '',
         status: project.status || '',
-        
-        // Supplier - Proforma Invoice
         supplierName: project.supplier?.proformaInvoice?.supplierName || '',
         supplierInvoiceNo: project.supplier?.proformaInvoice?.invoiceNumber || '',
-        supplierInvoiceAmount: project.supplier?.proformaInvoice?.invoiceAmount || 0,
+        supplierInvoiceAmount: supplierInvoiceAmount,
         supplierCreditNote: project.supplier?.proformaInvoice?.creditNote || 0,
         supplierFinalInvoice: project.supplier?.proformaInvoice?.finalInvoiceAmount || 0,
-        
-        // Supplier - Advance Payment
         loanAmount: project.supplier?.advancePayment?.loanAmount || 0,
         advancePaymentDate: project.supplier?.advancePayment?.paymentDate ? new Date(project.supplier.advancePayment.paymentDate).toLocaleDateString() : '',
         advanceReference: project.supplier?.advancePayment?.referenceNumber || '',
         twlContributionAdv: project.supplier?.advancePayment?.twlContribution || 0,
         totalPaymentAdv: project.supplier?.advancePayment?.totalPayment || 0,
         balanceAmountAdv: project.supplier?.advancePayment?.balanceAmount || 0,
-        
-        // Supplier - Balance Payment
-        supplierBalanceLoanAmount: project.supplier?.balancePayment?.loanAmount || 0,
+        supplierBalanceLoanAmount: balanceLoanAmount,
         supplierBalanceDate: project.supplier?.balancePayment?.date ? new Date(project.supplier.balancePayment.date).toLocaleDateString() : '',
         supplierBalanceRef: project.supplier?.balancePayment?.reference || '',
-        twlContributionBal: project.supplier?.balancePayment?.twlContribution || 0,
-        totalPaymentBal: storedBalanceTotalPayment,  // Auto-calculated: Loan Amount + TWL Contribution
-        
-        // Supplier - Summary
-        supplierTotalAmount: calculatedSupplierTotalAmount,  // ✅ Calculated: Advance Total + Balance Total
-        supplierCancelAmount: project.supplier?.summary?.cancelAmount || 0,
-        supplierBalancePayment: calculatedSupplierBalancePayment,  // ✅ Calculated: Final Invoice - Total Amount
-        
-        // Buyer - Proforma Invoice
+        twlContributionBal: balanceTwlContribution,
+        totalPaymentBal: calculatedBalanceTotalPayment,
+        supplierTotalAmount: calculatedSupplierTotalAmount,  // ✅ UPDATED: Invoice Amount - Cancel
+        supplierCancelAmount: supplierCancelAmount,  // ✅ Default to 0
+        supplierBalancePayment: calculatedSupplierBalancePayment,  // ✅ UPDATED: Total Amount - Total Paid
         buyerName: project.buyer?.proformaInvoice?.buyerName || '',
         buyerInvoiceNo: project.buyer?.proformaInvoice?.invoiceNo || '',
         buyerInvoiceDate: project.buyer?.proformaInvoice?.invoiceDate ? new Date(project.buyer.proformaInvoice.invoiceDate).toLocaleDateString() : '',
@@ -185,27 +191,19 @@ router.get('/export/excel', auth, async (req, res) => {
         freightCharges: project.buyer?.proformaInvoice?.freightCharges || 0,
         commission: project.buyer?.proformaInvoice?.commission || 0,
         buyerFinalInvoice: project.buyer?.proformaInvoice?.finalInvoiceAmount || 0,
-        
-        // Buyer - Advance Payment
         buyerAdvanceTwl: project.buyer?.advancePayment?.twlReceived || 0,
         buyerAdvanceBalance: project.buyer?.advancePayment?.balanceAmount || 0,
         buyerAdvanceDate: project.buyer?.advancePayment?.date ? new Date(project.buyer.advancePayment.date).toLocaleDateString() : '',
         buyerAdvanceRef: project.buyer?.advancePayment?.reference || '',
-        
-        // Buyer - Balance Payment
         buyerBalanceTwl: project.buyer?.balancePayment?.twlReceived || 0,
         buyerBalanceDate: project.buyer?.balancePayment?.date ? new Date(project.buyer.balancePayment.date).toLocaleDateString() : '',
         buyerBalanceRef: project.buyer?.balancePayment?.reference || '',
-        
-        // Buyer - Summary
         buyerTotalReceived: project.buyer?.summary?.totalReceived || 0,
         buyerCancel: project.buyer?.summary?.cancel || 0,
         buyerBalanceReceived: project.buyer?.summary?.balanceReceived || 0,
-        
-        // Costing - USE CALCULATED VALUES
         costingSupplierInvoice: supplierInvoice,
         costingTwlInvoice: twlInvoice,
-        profit: calculatedProfit,  // ✅ Calculated: TWL - Supplier
+        profit: calculatedProfit,
         inGoing: inGoing,
         outGoing: outGoing,
         calCharges: calCharges,
@@ -213,8 +211,8 @@ router.get('/export/excel', auth, async (req, res) => {
         foreignBankCharges: foreignBank,
         loanInterest: loanInterest,
         freightChargesCost: freightChargesCost,
-        totalExpenses: calculatedTotalExpenses,  // ✅ Calculated: Sum of expenses
-        netProfit: calculatedNetProfit  // ✅ Calculated: Profit - Total Expenses
+        totalExpenses: calculatedTotalExpenses,
+        netProfit: calculatedNetProfit
       });
     });
 
@@ -227,24 +225,33 @@ router.get('/export/excel', auth, async (req, res) => {
     const calculateTotals = (projectList) => {
       return projectList.reduce((totals, project) => {
         // Supplier values
-        totals.supplierInvoiceAmount += parseFloat(project.supplier?.proformaInvoice?.invoiceAmount) || 0;
+        const suppInvAmount = parseFloat(project.supplier?.proformaInvoice?.invoiceAmount) || 0;
+        const suppCancel = parseFloat(project.supplier?.summary?.cancelAmount) || 0;
+        
+        totals.supplierInvoiceAmount += suppInvAmount;
         totals.supplierCreditNote += parseFloat(project.supplier?.proformaInvoice?.creditNote) || 0;
         totals.supplierFinalInvoice += parseFloat(project.supplier?.proformaInvoice?.finalInvoiceAmount) || 0;
         totals.loanAmount += parseFloat(project.supplier?.advancePayment?.loanAmount) || 0;
         totals.twlContributionAdv += parseFloat(project.supplier?.advancePayment?.twlContribution) || 0;
         totals.totalPaymentAdv += parseFloat(project.supplier?.advancePayment?.totalPayment) || 0;
         totals.balanceAmountAdv += parseFloat(project.supplier?.advancePayment?.balanceAmount) || 0;
-        totals.supplierBalanceLoanAmount += parseFloat(project.supplier?.balancePayment?.loanAmount) || 0;
-        totals.twlContributionBal += parseFloat(project.supplier?.balancePayment?.twlContribution) || 0;
-        totals.totalPaymentBal += parseFloat(project.supplier?.balancePayment?.totalPayment) || 0;
         
+        // Calculate balance payment total correctly
+        const balLoan = parseFloat(project.supplier?.balancePayment?.loanAmount) || 0;
+        const balTwl = parseFloat(project.supplier?.balancePayment?.twlContribution) || 0;
+        totals.supplierBalanceLoanAmount += balLoan;
+        totals.twlContributionBal += balTwl;
+        totals.totalPaymentBal += (balLoan + balTwl);
+        
+        // ✅ UPDATED: Supplier summary calculation
         const advTotal = parseFloat(project.supplier?.advancePayment?.totalPayment) || 0;
-        const balTotal = parseFloat(project.supplier?.balancePayment?.totalPayment) || 0;
-        totals.supplierTotalAmount += advTotal + balTotal;
-        totals.supplierCancelAmount += parseFloat(project.supplier?.summary?.cancelAmount) || 0;
+        const balTotal = balLoan + balTwl;
+        const totalPaid = advTotal + balTotal;
         
-        const finalInv = parseFloat(project.supplier?.proformaInvoice?.finalInvoiceAmount) || 0;
-        totals.supplierBalancePayment += finalInv - (advTotal + balTotal);
+        const calculatedSuppTotal = suppInvAmount - suppCancel;  // ✅ Invoice - Cancel
+        totals.supplierTotalAmount += calculatedSuppTotal;
+        totals.supplierCancelAmount += suppCancel;  // ✅ Default 0
+        totals.supplierBalancePayment += (calculatedSuppTotal - totalPaid);  // ✅ Total - Paid
         
         // Buyer values
         totals.twlInvoiceAmount += parseFloat(project.buyer?.proformaInvoice?.twlInvoiceAmount) || 0;
@@ -261,18 +268,26 @@ router.get('/export/excel', auth, async (req, res) => {
         totals.buyerBalanceReceived += parseFloat(project.buyer?.summary?.balanceReceived) || 0;
         
         // Costing values
-        const supplierInv = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+        const suppInv = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
         const twlInv = parseFloat(project.costing?.twlInvoiceAmount) || 0;
-        totals.costingSupplierInvoice += supplierInv;
+        const inGo = parseFloat(project.costing?.inGoing) || 0;
+        const outGo = parseFloat(project.costing?.outGoing) || 0;
+        const cal = parseFloat(project.costing?.calCharges) || 0;
+        const oth = parseFloat(project.costing?.other) || 0;
+        const foreign = parseFloat(project.costing?.foreignBankCharges) || 0;
+        const loan = parseFloat(project.costing?.loanInterest) || 0;
+        const freight = parseFloat(project.costing?.freightCharges) || 0;
+        
+        totals.costingSupplierInvoice += suppInv;
         totals.costingTwlInvoice += twlInv;
-        totals.profit += (twlInv - supplierInv);
-        totals.inGoing += parseFloat(project.costing?.inGoing) || 0;
-        totals.outGoing += parseFloat(project.costing?.outGoing) || 0;
-        totals.calCharges += parseFloat(project.costing?.calCharges) || 0;
-        totals.other += parseFloat(project.costing?.other) || 0;
-        totals.foreignBankCharges += parseFloat(project.costing?.foreignBankCharges) || 0;
-        totals.loanInterest += parseFloat(project.costing?.loanInterest) || 0;
-        totals.freightChargesCost += parseFloat(project.costing?.freightCharges) || 0;
+        totals.profit += (twlInv - suppInv);
+        totals.inGoing += inGo;
+        totals.outGoing += outGo;
+        totals.calCharges += cal;
+        totals.other += oth;
+        totals.foreignBankCharges += foreign;
+        totals.loanInterest += loan;
+        totals.freightChargesCost += freight;
         
         return totals;
       }, {

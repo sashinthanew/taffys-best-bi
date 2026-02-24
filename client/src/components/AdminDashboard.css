@@ -355,6 +355,14 @@
   min-height: 100px;
 }
 
+.field-hint {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.4rem;
+  font-style: italic;
+  font-weight: 500;
+}
+
 /* ALERTS */
 .alert {
   padding: 1.2rem 1.8rem;
@@ -484,6 +492,43 @@
 .show-form-button:hover {
   transform: translateY(-4px) scale(1.02);
   box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+}
+
+.export-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.export-filter-input {
+  padding: 12px 18px;
+  border: 2px solid #cbd5e0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  min-width: 250px;
+  font-weight: 500;
+}
+
+.export-filter-input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15),
+              0 4px 15px rgba(16, 185, 129, 0.1);
+  transform: translateY(-2px);
+}
+
+.export-filter-input:disabled {
+  background: #e2e8f0;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.export-filter-input::placeholder {
+  color: #94a3b8;
+  font-style: italic;
 }
 
 .export-excel-button {
@@ -641,6 +686,17 @@
   margin: 0 0 0.5rem 0;
   font-size: 1.4rem;
   font-weight: 800;
+}
+
+.project-uniq-no {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
 .project-no {
@@ -816,6 +872,16 @@
   .header-actions {
     flex-direction: column;
     width: 100%;
+  }
+  
+  .export-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .export-filter-input {
+    width: 100%;
+    min-width: unset;
   }
   
   .cancel-edit-button,

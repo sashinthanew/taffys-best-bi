@@ -4,40 +4,30 @@ import API_URL from '../config/api';
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [formData, setFormData] = useState({
-    // Project Section
+    projectUniqNo: '',  // ✅ NEW: Unique project number
     projectName: '',
     projectNo: '',
     projectDate: '',
-    status: 'Active',  // ADD THIS LINE
-    
-    // Supplier - Proforma Invoice
+    status: 'Active',
     supplierName: '',
     supplierInvoiceNumber: '',
     supplierInvoiceAmount: '',
     creditNote: '',
     finalInvoiceAmount: '',
-    
-    // Supplier - Advance Payment
     loanAmount: '',
     advancePaymentDate: '',
     advanceReferenceNumber: '',
     twlContribution: '',
     totalPayment: '',
     balanceAmount: '',
-    
-    // Supplier - Balance Payment
     supplierBalanceLoanAmount: '',
     supplierBalanceDate: '',
     supplierBalanceReference: '',
     supplierBalanceTwlContribution: '',
     supplierBalanceTotalPayment: '',
-    
-    // Supplier - Summary
     supplierTotalAmount: '',
-    supplierCancelAmount: '',
+    supplierCancelAmount: '0',  // ✅ Set default to '0'
     supplierSummaryBalancePayment: '',
-    
-    // Buyer - Proforma Invoice (NEW STRUCTURE)
     buyerName: '',
     buyerProformaInvoiceNo: '',
     buyerProformaInvoiceDate: '',
@@ -47,24 +37,16 @@ const AdminDashboard = ({ user, onLogout }) => {
     buyerTwlInvoiceAmount: '',
     buyerFinalInvoiceAmount: '',
     buyerCommission: '',
-    
-    // Buyer - Advance Payment (NEW STRUCTURE)
     buyerAdvanceTwlReceived: '',
     buyerAdvanceBalanceAmount: '',
     buyerAdvanceDate: '',
     buyerAdvanceReference: '',
-    
-    // Buyer - Balance Payment (NEW STRUCTURE)
     buyerBalanceTwlReceived: '',
     buyerBalanceDate: '',
     buyerBalanceReference: '',
-    
-    // Buyer - Summary (NEW STRUCTURE)
     buyerTotalReceived: '',
     buyerCancel: '',
     buyerBalanceReceived: '',
-    
-    // Costing
     costingSupplierInvoiceAmount: '',
     costingTwlInvoiceAmount: '',
     costingProfit: '',
@@ -96,6 +78,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   });
   
   const [expandedProject, setExpandedProject] = useState(null);
+  const [exportFilter, setExportFilter] = useState('');
 
   useEffect(() => {
     fetchProjects();
@@ -107,16 +90,20 @@ const AdminDashboard = ({ user, onLogout }) => {
   }, [projects, filters]);
 
   const applyFilters = () => {
+    if (!projects || !Array.isArray(projects)) {
+      setFilteredProjects([]);
+      return;
+    }
+    
     let filtered = [...projects];
-
-    // Search filter (project name, project number, supplier name, buyer name)
+    
+    // Search filter
     if (filters.searchTerm) {
-      const searchLower = filters.searchTerm.toLowerCase();
       filtered = filtered.filter(project => 
-        project.projectName?.toLowerCase().includes(searchLower) ||
-        project.projectNo?.toLowerCase().includes(searchLower) ||
-        project.supplier?.proformaInvoice?.supplierName?.toLowerCase().includes(searchLower) ||
-        project.buyer?.proformaInvoice?.buyerName?.toLowerCase().includes(searchLower)
+        project.projectUniqNo?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||  // ✅ NEW
+        project.projectName?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        project.projectNo?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        project.supplier?.proformaInvoice?.supplierName?.toLowerCase().includes(filters.searchTerm.toLowerCase())
       );
     }
 
@@ -217,26 +204,30 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   // Auto-calculate supplier summary
   useEffect(() => {
+    const supplierInvoiceAmount = parseFloat(formData.supplierInvoiceAmount) || 0;
+    const supplierCancelAmount = parseFloat(formData.supplierCancelAmount) || 0;  // ✅ Defaults to 0
+  
+    // Total Amount = Invoice Amount - Cancel Amount
+    const totalAmount = supplierInvoiceAmount - supplierCancelAmount;
+  
+    // Calculate total paid (advance + balance)
     const advanceTotalPayment = parseFloat(formData.totalPayment) || 0;
     const balanceTotalPayment = parseFloat(formData.supplierBalanceTotalPayment) || 0;
-    const finalInvoiceAmount = parseFloat(formData.finalInvoiceAmount) || 0;
-    
-    // Total Amount = Total Payment (Advance) + Total Payment (Balance)
-    const totalAmount = advanceTotalPayment + balanceTotalPayment;
-    
-    // Balance Payment = Final Invoice Amount - Total Amount
-    const balancePayment = finalInvoiceAmount - totalAmount;
-    
+    const totalPaid = advanceTotalPayment + balanceTotalPayment;
+  
+    // Balance Payment = Total Amount - Total Paid
+    const balancePayment = totalAmount - totalPaid;
+  
     setFormData(prev => ({
       ...prev,
       supplierTotalAmount: totalAmount.toFixed(2),
-      // supplierCancelAmount is now manually entered, not auto-calculated
       supplierSummaryBalancePayment: balancePayment.toFixed(2)
     }));
   }, [
+    formData.supplierInvoiceAmount,
+    formData.supplierCancelAmount,  // ✅ Watches for changes
     formData.totalPayment,
-    formData.supplierBalanceTotalPayment,
-    formData.finalInvoiceAmount
+    formData.supplierBalanceTotalPayment
   ]);
 
   // Auto-hide success/error messages after 5 seconds
@@ -275,18 +266,17 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     setError('');
     setSuccess('');
-    setLoading(true);
 
     try {
       const token = localStorage.getItem('token');
-      
-      // Transform form data to match backend schema
       const projectData = {
+        projectUniqNo: formData.projectUniqNo,
         projectName: formData.projectName,
         projectNo: formData.projectNo,
-        projectDate: new Date(formData.projectDate),
+        projectDate: formData.projectDate,
         status: formData.status,
         supplier: {
           proformaInvoice: {
@@ -362,20 +352,27 @@ const AdminDashboard = ({ user, onLogout }) => {
         }
       };
 
-      const url = editingProject 
-        ? `${API_URL}/api/projects/${editingProject._id}`
-        : `${API_URL}/api/projects`;
-      
-      const method = editingProject ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(projectData)
-      });
+      // ✅ FIXED: Use fetch instead of axios
+      let response;
+      if (editingProject) {
+        response = await fetch(`${API_URL}/api/projects/${editingProject._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(projectData)
+        });
+      } else {
+        response = await fetch(`${API_URL}/api/projects`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(projectData)
+        });
+      }
 
       const data = await response.json();
 
@@ -383,13 +380,11 @@ const AdminDashboard = ({ user, onLogout }) => {
         setSuccess(editingProject ? '✓ Project updated successfully!' : '✓ Project created successfully!');
         resetForm();
         fetchProjects();
-        setShowForm(false);
-        setTimeout(() => setShowForm(true), 100);
       } else {
         setError(data.message || 'Failed to save project');
       }
-    } catch (error) {
-      console.error('Error saving project:', error);
+    } catch (err) {
+      console.error('Error saving project:', err);
       setError('Server error. Please try again.');
     } finally {
       setLoading(false);
@@ -398,11 +393,11 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   const resetForm = () => {
     setFormData({
+      projectUniqNo: '',  // ✅ NEW
       projectName: '',
       projectNo: '',
       projectDate: '',
-      status: 'Active',  // ADD THIS LINE
-      
+      status: 'Active',
       supplierName: '',
       supplierInvoiceNumber: '',
       supplierInvoiceAmount: '',
@@ -420,7 +415,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       supplierBalanceTwlContribution: '',
       supplierBalanceTotalPayment: '',
       supplierTotalAmount: '',
-      supplierCancelAmount: '',
+      supplierCancelAmount: '0',  // ✅ Reset to '0'
       supplierSummaryBalancePayment: '',
       buyerName: '',
       buyerProformaInvoiceNo: '',
@@ -458,11 +453,11 @@ const AdminDashboard = ({ user, onLogout }) => {
   };
 
   const handleEdit = (project) => {
-    setEditingProject(project);
     setFormData({
-      projectName: project.projectName,
-      projectNo: project.projectNo,
-      projectDate: project.projectDate?.split('T')[0] || '',
+      projectUniqNo: project.projectUniqNo || '',  // ✅ NEW
+      projectName: project.projectName || '',
+      projectNo: project.projectNo || '',
+      projectDate: project.projectDate ? project.projectDate.split('T')[0] : '',
       status: project.status || 'Active',
       supplierName: project.supplier?.proformaInvoice?.supplierName || '',
       supplierInvoiceNumber: project.supplier?.proformaInvoice?.invoiceNumber || '',
@@ -515,6 +510,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       costingTotal: (project.costing?.total || 0).toString(),
       costingNetProfit: (project.costing?.netProfit || 0).toString(),
     });
+    setEditingProject(project);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -594,7 +590,6 @@ const AdminDashboard = ({ user, onLogout }) => {
     setFormData(prev => ({
       ...prev,
       buyerTotalReceived: totalReceived.toFixed(2),
-      // buyerCancel is now manually entered, not auto-calculated
       buyerBalanceReceived: balanceReceived.toFixed(2)
     }));
   }, [
@@ -653,7 +648,15 @@ const AdminDashboard = ({ user, onLogout }) => {
       }
       
       console.log('Fetching Excel file from server...');
-      const response = await fetch(`${API_URL}/api/projects/export/excel`, {
+      
+      // Build URL with filter parameter
+      let url = `${API_URL}/api/projects/export/excel`;
+      if (exportFilter.trim()) {
+        url += `?projectUniqNo=${encodeURIComponent(exportFilter.trim())}`;
+        console.log('Filtering by Project Unique No:', exportFilter.trim());
+      }
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -690,15 +693,15 @@ const AdminDashboard = ({ user, onLogout }) => {
         throw new Error('Received empty file from server');
       }
       
-      const url = window.URL.createObjectURL(blob);
+      const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
+      link.href = downloadUrl;
       link.download = `TWL_Projects_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(link);
       console.log('Triggering download...');
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(downloadUrl);
       
       console.log('Excel export completed successfully');
       setSuccess('✓ Excel report downloaded successfully!');
@@ -779,6 +782,19 @@ const AdminDashboard = ({ user, onLogout }) => {
                 <h3 className="card-title">📋 Project Information</h3>
                 <div className="form-grid">
                   <div className="form-group">
+                    <label>Project Unique No</label>
+                    <input
+                      type="text"
+                      name="projectUniqNo"
+                      value={formData.projectUniqNo}
+                      onChange={handleChange}
+                      placeholder="e.g., Project 1, Project 2"
+                      disabled={loading}
+                    />
+                    <small className="field-hint">Unique identifier for this project (optional)</small>
+                  </div>
+                  
+                  <div className="form-group">
                     <label>Project Name *</label>
                     <input
                       type="text"
@@ -820,7 +836,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                     />
                   </div>
 
-                  {/* ADD THIS STATUS FIELD */}
                   <div className="form-group">
                     <label>Project Status *</label>
                     <div className="status-checkbox-group">
@@ -1615,23 +1630,33 @@ const AdminDashboard = ({ user, onLogout }) => {
         <div className="projects-section">
           <div className="section-header">
             <h2 className="section-title">📊 All Projects ({filteredProjects.length})</h2>
-            <button 
-              onClick={handleExportToExcel} 
-              className="export-excel-button"
-              disabled={loading || projects.length === 0}
-              title="Export all projects to Excel"
-            >
-              {loading ? (
-                <>
-                  <span className="spinner"></span>
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  📥 Export to Excel
-                </>
-              )}
-            </button>
+            <div className="export-controls">
+              <input
+                type="text"
+                placeholder="Filter by Project Uniq No (optional)"
+                value={exportFilter}
+                onChange={(e) => setExportFilter(e.target.value)}
+                className="export-filter-input"
+                disabled={loading}
+              />
+              <button 
+                onClick={handleExportToExcel} 
+                className="export-excel-button"
+                disabled={loading || projects.length === 0}
+                title={exportFilter.trim() ? `Export projects matching: ${exportFilter.trim()}` : "Export all projects to Excel"}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    📥 Export {exportFilter.trim() ? 'Filtered' : 'All'}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Filters Section */}
@@ -1706,8 +1731,13 @@ const AdminDashboard = ({ user, onLogout }) => {
                 <div key={project._id} className={`project-card ${expandedProject === project._id ? 'expanded' : ''}`}>
                   <div className="project-card-header">
                     <div>
-                      <h3>{project.projectName}</h3>
-                      <span className="project-no">{project.projectNo}</span>
+                      <h3>
+                        {project.projectUniqNo && (
+                          <span className="project-uniq-no">{project.projectUniqNo} - </span>
+                        )}
+                        {project.projectName}
+                      </h3>
+                      <span className="project-no">Project No: {project.projectNo}</span>
                     </div>
                     <div className="card-actions">
                       <button 
@@ -1746,50 +1776,50 @@ const AdminDashboard = ({ user, onLogout }) => {
                   </div>
 
                   {/* Quick Summary */}
-<div className="project-quick-summary">
-  <div className="summary-item">
-    <span className="summary-label">Supplier:</span>
-    <span className="summary-value">{project.supplier?.proformaInvoice?.supplierName || 'N/A'}</span>
-  </div>
-  <div className="summary-item">
-    <span className="summary-label">Buyer:</span>
-    <span className="summary-value">{project.buyer?.proformaInvoice?.buyerName || 'N/A'}</span>
-  </div>
-  <div className="summary-item highlight">
-    <span className="summary-label">Net Profit:</span>
-    <span className={`summary-value ${(() => {
-      const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
-      const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
-      const inGoing = parseFloat(project.costing?.inGoing) || 0;
-      const outGoing = parseFloat(project.costing?.outGoing) || 0;
-      const calCharges = parseFloat(project.costing?.calCharges) || 0;
-      const other = parseFloat(project.costing?.other) || 0;
-      const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
-      const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
-      const freight = parseFloat(project.costing?.freightCharges) || 0;
-      const profit = twlInvoice - supplierInvoice;
-      const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
-      const netProfit = profit - total;
-      return netProfit >= 0;
-    })() ? 'profit-positive' : 'profit-negative'}`}>
-      ${(() => {
-        const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
-        const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
-        const inGoing = parseFloat(project.costing?.inGoing) || 0;
-        const outGoing = parseFloat(project.costing?.outGoing) || 0;
-        const calCharges = parseFloat(project.costing?.calCharges) || 0;
-        const other = parseFloat(project.costing?.other) || 0;
-        const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
-        const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
-        const freight = parseFloat(project.costing?.freightCharges) || 0;
-        const profit = twlInvoice - supplierInvoice;
-        const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
-        const netProfit = profit - total;
-        return netProfit.toFixed(2);
-      })()}
-    </span>
-  </div>
-</div>
+                  <div className="project-quick-summary">
+                    <div className="summary-item">
+                      <span className="summary-label">Supplier:</span>
+                      <span className="summary-value">{project.supplier?.proformaInvoice?.supplierName || 'N/A'}</span>
+                    </div>
+                    <div className="summary-item">
+                      <span className="summary-label">Buyer:</span>
+                      <span className="summary-value">{project.buyer?.proformaInvoice?.buyerName || 'N/A'}</span>
+                    </div>
+                    <div className="summary-item highlight">
+                      <span className="summary-label">Net Profit:</span>
+                      <span className={`summary-value ${(() => {
+                        const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+                        const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+                        const inGoing = parseFloat(project.costing?.inGoing) || 0;
+                        const outGoing = parseFloat(project.costing?.outGoing) || 0;
+                        const calCharges = parseFloat(project.costing?.calCharges) || 0;
+                        const other = parseFloat(project.costing?.other) || 0;
+                        const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
+                        const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
+                        const freight = parseFloat(project.costing?.freightCharges) || 0;
+                        const profit = twlInvoice - supplierInvoice;
+                        const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
+                        const netProfit = profit - total;
+                        return netProfit >= 0;
+                      })() ? 'profit-positive' : 'profit-negative'}`}>
+                        ${(() => {
+                          const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+                          const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+                          const inGoing = parseFloat(project.costing?.inGoing) || 0;
+                          const outGoing = parseFloat(project.costing?.outGoing) || 0;
+                          const calCharges = parseFloat(project.costing?.calCharges) || 0;
+                          const other = parseFloat(project.costing?.other) || 0;
+                          const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
+                          const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
+                          const freight = parseFloat(project.costing?.freightCharges) || 0;
+                          const profit = twlInvoice - supplierInvoice;
+                          const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
+                          const netProfit = profit - total;
+                          return netProfit.toFixed(2);
+                        })()}
+                      </span>
+                    </div>
+                  </div>
 
                   {/* Expanded Details */}
                   {expandedProject === project._id && (
@@ -1988,114 +2018,114 @@ const AdminDashboard = ({ user, onLogout }) => {
                       </div>
 
                       {/* Costing Details */}
-<div className="detail-section">
-  <h4 className="detail-section-title">💰 Costing Details</h4>
-  
-  <div className="detail-subsection">
-    <h5>Revenue</h5>
-    <div className="detail-row">
-      <span>Supplier Invoice Amount:</span>
-      <span className="value">${project.costing?.supplierInvoiceAmount?.toFixed(2) || '0.00'}</span>
-    </div>
-    <div className="detail-row">
-      <span>TWL Invoice Amount:</span>
-      <span className="value">${project.costing?.twlInvoiceAmount?.toFixed(2) || '0.00'}</span>
-    </div>
-    <div className="detail-row highlight">
-      <span>Profit:</span>
-      <span className="value">${(() => {
-        const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
-        const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
-        const profit = twlInvoice - supplierInvoice;
-        return profit.toFixed(2);
-      })()}</span>
-    </div>
-  </div>
+                      <div className="detail-section">
+                        <h4 className="detail-section-title">💰 Costing Details</h4>
+                        
+                        <div className="detail-subsection">
+                          <h5>Revenue</h5>
+                          <div className="detail-row">
+                            <span>Supplier Invoice Amount:</span>
+                            <span className="value">${project.costing?.supplierInvoiceAmount?.toFixed(2) || '0.00'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span>TWL Invoice Amount:</span>
+                            <span className="value">${project.costing?.twlInvoiceAmount?.toFixed(2) || '0.00'}</span>
+                          </div>
+                          <div className="detail-row highlight">
+                            <span>Profit:</span>
+                            <span className="value">${(() => {
+                              const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+                              const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+                              const profit = twlInvoice - supplierInvoice;
+                              return profit.toFixed(2);
+                            })()}</span>
+                          </div>
+                        </div>
 
-  <div className="detail-subsection">
-    <h5>Expenses</h5>
-    <div className="detail-row">
-      <span>In Going:</span>
-      <span className="value">${project.costing?.inGoing?.toFixed(2) || '0.00'}</span>
-    </div>
-    <div className="detail-row">
-      <span>Out Going:</span>
-      <span className="value">${project.costing?.outGoing?.toFixed(2) || '0.00'}</span>
-    </div>
-    <div className="detail-row">
-      <span>CAL Charges:</span>
-      <span className="value">${project.costing?.calCharges?.toFixed(2) || '0.00'}</span>
-    </div>
-    <div className="detail-row">
-      <span>Other:</span>
-      <span className="value">${project.costing?.other?.toFixed(2) || '0.00'}</span>
-    </div>
-    <div className="detail-row">
-      <span>Foreign Bank Charges:</span>
-      <span className="value">${project.costing?.foreignBankCharges?.toFixed(2) || '0.00'}</span>
-    </div>
-    <div className="detail-subsection">
-      <span>Loan Interest:</span>
-      <span className="value">${project.costing?.loanInterest?.toFixed(2) || '0.00'}</span>
-    </div>
-    <div className="detail-row">
-      <span>Freight Charges:</span>
-      <span className="value">${project.costing?.freightCharges?.toFixed(2) || '0.00'}</span>
-    </div>
-    <div className="detail-row highlight">
-      <span>Total Expenses:</span>
-      <span className="value">${(() => {
-        const inGoing = parseFloat(project.costing?.inGoing) || 0;
-        const outGoing = parseFloat(project.costing?.outGoing) || 0;
-        const calCharges = parseFloat(project.costing?.calCharges) || 0;
-        const other = parseFloat(project.costing?.other) || 0;
-        const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
-        const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
-        const freight = parseFloat(project.costing?.freightCharges) || 0;
-        const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
-        return total.toFixed(2);
-      })()}</span>
-    </div>
-  </div>
+                        <div className="detail-subsection">
+                          <h5>Expenses</h5>
+                          <div className="detail-row">
+                            <span>In Going:</span>
+                            <span className="value">${project.costing?.inGoing?.toFixed(2) || '0.00'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span>Out Going:</span>
+                            <span className="value">${project.costing?.outGoing?.toFixed(2) || '0.00'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span>CAL Charges:</span>
+                            <span className="value">${project.costing?.calCharges?.toFixed(2) || '0.00'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span>Other:</span>
+                            <span className="value">${project.costing?.other?.toFixed(2) || '0.00'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span>Foreign Bank Charges:</span>
+                            <span className="value">${project.costing?.foreignBankCharges?.toFixed(2) || '0.00'}</span>
+                          </div>
+                          <div className="detail-subsection">
+                            <span>Loan Interest:</span>
+                            <span className="value">${project.costing?.loanInterest?.toFixed(2) || '0.00'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span>Freight Charges:</span>
+                            <span className="value">${project.costing?.freightCharges?.toFixed(2) || '0.00'}</span>
+                          </div>
+                          <div className="detail-row highlight">
+                            <span>Total Expenses:</span>
+                            <span className="value">${(() => {
+                              const inGoing = parseFloat(project.costing?.inGoing) || 0;
+                              const outGoing = parseFloat(project.costing?.outGoing) || 0;
+                              const calCharges = parseFloat(project.costing?.calCharges) || 0;
+                              const other = parseFloat(project.costing?.other) || 0;
+                              const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
+                              const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
+                              const freight = parseFloat(project.costing?.freightCharges) || 0;
+                              const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
+                              return total.toFixed(2);
+                            })()}</span>
+                          </div>
+                        </div>
 
-  <div className="detail-subsection summary-subsection net-profit-section">
-    <h5>Final Result</h5>
-    <div className="detail-row net-profit-row">
-      <span>Net Profit:</span>
-      <span className={`value net-profit-value ${(() => {
-        const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
-        const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
-        const inGoing = parseFloat(project.costing?.inGoing) || 0;
-        const outGoing = parseFloat(project.costing?.outGoing) || 0;
-        const calCharges = parseFloat(project.costing?.calCharges) || 0;
-        const other = parseFloat(project.costing?.other) || 0;
-        const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
-        const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
-        const freight = parseFloat(project.costing?.freightCharges) || 0;
-        const profit = twlInvoice - supplierInvoice;
-        const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
-        const netProfit = profit - total;
-        return netProfit >= 0;
-      })() ? 'profit-positive' : 'profit-negative'}`}>
-        ${(() => {
-          const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
-          const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
-          const inGoing = parseFloat(project.costing?.inGoing) || 0;
-          const outGoing = parseFloat(project.costing?.outGoing) || 0;
-          const calCharges = parseFloat(project.costing?.calCharges) || 0;
-          const other = parseFloat(project.costing?.other) || 0;
-          const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
-          const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
-          const freight = parseFloat(project.costing?.freightCharges) || 0;
-          const profit = twlInvoice - supplierInvoice;
-          const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
-          const netProfit = profit - total;
-          return netProfit.toFixed(2);
-        })()}
-      </span>
-    </div>
-  </div>
-</div>
+                        <div className="detail-subsection summary-subsection net-profit-section">
+                          <h5>Final Result</h5>
+                          <div className="detail-row net-profit-row">
+                            <span>Net Profit:</span>
+                            <span className={`value net-profit-value ${(() => {
+                              const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+                              const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+                              const inGoing = parseFloat(project.costing?.inGoing) || 0;
+                              const outGoing = parseFloat(project.costing?.outGoing) || 0;
+                              const calCharges = parseFloat(project.costing?.calCharges) || 0;
+                              const other = parseFloat(project.costing?.other) || 0;
+                              const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
+                              const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
+                              const freight = parseFloat(project.costing?.freightCharges) || 0;
+                              const profit = twlInvoice - supplierInvoice;
+                              const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
+                              const netProfit = profit - total;
+                              return netProfit >= 0;
+                            })() ? 'profit-positive' : 'profit-negative'}`}>
+                              ${(() => {
+                                const supplierInvoice = parseFloat(project.costing?.supplierInvoiceAmount) || 0;
+                                const twlInvoice = parseFloat(project.costing?.twlInvoiceAmount) || 0;
+                                const inGoing = parseFloat(project.costing?.inGoing) || 0;
+                                const outGoing = parseFloat(project.costing?.outGoing) || 0;
+                                const calCharges = parseFloat(project.costing?.calCharges) || 0;
+                                const other = parseFloat(project.costing?.other) || 0;
+                                const foreignBank = parseFloat(project.costing?.foreignBankCharges) || 0;
+                                const loanInterest = parseFloat(project.costing?.loanInterest) || 0;
+                                const freight = parseFloat(project.costing?.freightCharges) || 0;
+                                const profit = twlInvoice - supplierInvoice;
+                                const total = inGoing + outGoing + calCharges + other + foreignBank + loanInterest + freight;
+                                const netProfit = profit - total;
+                                return netProfit.toFixed(2);
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

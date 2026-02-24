@@ -1,29 +1,28 @@
 const mongoose = require('mongoose');
 
 const projectSchema = new mongoose.Schema({
-  // Project Section
+  projectUniqNo: {
+    type: String,
+    required: false,  // ✅ Changed to false for backward compatibility with existing projects
+    sparse: true,     // ✅ Allow null values in unique index
+    trim: true
+  },
   projectName: {
     type: String,
-    required: [true, 'Project name is required'],
-    trim: true
+    required: true
   },
   projectNo: {
     type: String,
-    required: [true, 'Project number is required'],
-    unique: true,
-    trim: true
+    required: true
   },
   projectDate: {
     type: Date,
-    required: [true, 'Project date is required']
+    required: true
   },
-  
-  // Project Status
   status: {
     type: String,
     enum: ['Active', 'Inactive'],
-    default: 'Active',
-    required: true
+    default: 'Active'
   },
 
   // Supplier Section

@@ -216,11 +216,12 @@ router.get('/export/excel', auth, async (req, res) => {
         
         const supplierInvoiceAmount = parseFloat(project.supplier?.proformaInvoice?.invoiceAmount) || 0;
         const supplierCancelAmount = parseFloat(project.supplier?.summary?.cancelAmount) || 0;
-        const calculatedSupplierTotalAmount = supplierInvoiceAmount - supplierCancelAmount;
         
         const advanceTotalPayment = parseFloat(project.supplier?.advancePayment?.totalPayment) || 0;
-        const totalPaidToSupplier = advanceTotalPayment + calculatedBalanceTotalPayment;
-        const calculatedSupplierBalancePayment = calculatedSupplierTotalAmount - totalPaidToSupplier;
+        
+        // ✅ FIXED: Supplier Total Amount = Advance Total Payment + Balance Total Payment
+        const calculatedSupplierTotalAmount = advanceTotalPayment + calculatedBalanceTotalPayment;
+        const calculatedSupplierBalancePayment = calculatedSupplierTotalAmount - advanceTotalPayment;
         
         const buyerFinalInvoiceAmount = parseFloat(project.buyer?.proformaInvoice?.finalInvoiceAmount) || 0;
         const buyerAdvanceTwlReceived = parseFloat(project.buyer?.advancePayment?.twlReceived) || 0;
@@ -354,11 +355,12 @@ router.get('/export/excel', auth, async (req, res) => {
         
         const suppInvAmt = parseFloat(project.supplier?.proformaInvoice?.invoiceAmount) || 0;
         const suppCancelAmt = parseFloat(project.supplier?.summary?.cancelAmount) || 0;
-        const calcSuppTotal = suppInvAmt - suppCancelAmt;
         
         const advTotal = parseFloat(project.supplier?.advancePayment?.totalPayment) || 0;
-        const totalPaid = advTotal + calcBalanceTotal;
-        const calcSuppBalance = calcSuppTotal - totalPaid;
+        
+        // ✅ FIXED: Supplier Total Amount = Advance Total Payment + Balance Total Payment
+        const calcSuppTotal = advTotal + calcBalanceTotal;
+        const calcSuppBalance = calcBalanceTotal;
         
         const buyerFinalInv = parseFloat(project.buyer?.proformaInvoice?.finalInvoiceAmount) || 0;
         const buyerAdvTwl = parseFloat(project.buyer?.advancePayment?.twlReceived) || 0;
@@ -376,6 +378,7 @@ router.get('/export/excel', auth, async (req, res) => {
         totals.supplierTotalAmount += calcSuppTotal;
         totals.supplierCancelAmount += suppCancelAmt;
         totals.supplierBalancePayment += calcSuppBalance;
+        
         totals.twlInvoiceAmount += parseFloat(project.buyer?.proformaInvoice?.twlInvoiceAmount) || 0;
         totals.buyerCreditNote += parseFloat(project.buyer?.proformaInvoice?.creditNote) || 0;
         totals.bankInterest += parseFloat(project.buyer?.proformaInvoice?.bankInterest) || 0;

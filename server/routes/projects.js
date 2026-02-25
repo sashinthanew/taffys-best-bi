@@ -19,7 +19,16 @@ router.get('/export/excel', auth, async (req, res) => {
       query.projectUniqNo = { $regex: projectUniqNo, $options: 'i' };
     }
     
-    const projects = await Project.find(query).sort({ projectUniqNo: 1, createdAt: -1 });
+    // Fetch projects and sort numerically by projectUniqNo
+    let projects = await Project.find(query);
+    
+    // ✅ Sort numerically by projectUniqNo (1, 2, 3, 10, 11... instead of 1, 10, 11, 2, 3...)
+    projects.sort((a, b) => {
+      const numA = parseInt(a.projectUniqNo) || 0;
+      const numB = parseInt(b.projectUniqNo) || 0;
+      return numA - numB;
+    });
+    
     console.log(`Found ${projects.length} projects to export`);
 
     if (projects.length === 0) {

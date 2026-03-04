@@ -149,12 +149,14 @@ projectSchema.pre('save', function() {
   this.supplier.balancePayment.totalPayment = supplierBalanceAmount + supplierBalanceTwl;
   
   // 5. Supplier Summary Calculations
-  this.supplier.summary.totalAmount = 
-    this.supplier.advancePayment.totalPayment + 
-    this.supplier.balancePayment.totalPayment;
-  
-  this.supplier.summary.cancelAmount = creditNote - this.supplier.summary.totalAmount;
-  this.supplier.summary.balancePayment = finalInvoice - this.supplier.summary.totalAmount;
+  // Note: Total Amount, Cancel Amount, and Balance Payment are calculated on frontend
+  // and sent with the request. We preserve those values here.
+  // Only calculate if not provided (backward compatibility)
+  if (!this.supplier.summary.totalAmount) {
+    this.supplier.summary.totalAmount = 
+      this.supplier.advancePayment.totalPayment + 
+      this.supplier.balancePayment.totalPayment;
+  }
   
   this.supplier.paymentTotal = this.supplier.summary.totalAmount;
 
@@ -178,17 +180,14 @@ projectSchema.pre('save', function() {
     this.buyer.proformaInvoice.finalInvoiceAmount - buyerAdvanceTwlReceived;
   
   // 3. Buyer Summary Calculations
+  // Note: Total Received, Cancel, and Balance Received are calculated on frontend
+  // and sent with the request. We preserve those values here.
+  // Only calculate if not provided (backward compatibility)
   const buyerBalanceTwlReceived = this.buyer.balancePayment.twlReceived || 0;
   
-  // Total Received = Advance TWL Received + Balance TWL Received
-  this.buyer.summary.totalReceived = buyerAdvanceTwlReceived + buyerBalanceTwlReceived;
-  
-  // Cancel (you can set logic here, keeping as 0 for now)
-  this.buyer.summary.cancel = 0;
-  
-  // Balance Received = Final Invoice Amount - Total Received
-  this.buyer.summary.balanceReceived = 
-    this.buyer.proformaInvoice.finalInvoiceAmount - this.buyer.summary.totalReceived;
+  if (!this.buyer.summary.totalReceived) {
+    this.buyer.summary.totalReceived = buyerAdvanceTwlReceived + buyerBalanceTwlReceived;
+  }
 
   this.buyer.paymentTotal = this.buyer.summary.totalReceived;
 
@@ -246,12 +245,13 @@ projectSchema.pre('findOneAndUpdate', function() {
     const supplierBalanceTwl = update.supplier?.balancePayment?.twlContribution || 0;
     update.supplier.balancePayment.totalPayment = supplierBalanceAmount + supplierBalanceTwl;
     
-    update.supplier.summary.totalAmount = 
-      update.supplier.advancePayment.totalPayment + 
-      update.supplier.balancePayment.totalPayment;
+    // Supplier Summary - preserve frontend calculations
+    if (!update.supplier.summary.totalAmount) {
+      update.supplier.summary.totalAmount = 
+        update.supplier.advancePayment.totalPayment + 
+        update.supplier.balancePayment.totalPayment;
+    }
     
-    update.supplier.summary.cancelAmount = creditNote - update.supplier.summary.totalAmount;
-    update.supplier.summary.balancePayment = finalInvoice - update.supplier.summary.totalAmount;
     update.supplier.paymentTotal = update.supplier.summary.totalAmount;
   }
 
@@ -278,18 +278,12 @@ projectSchema.pre('findOneAndUpdate', function() {
     update.buyer.advancePayment.balanceAmount = 
       update.buyer.proformaInvoice.finalInvoiceAmount - buyerAdvanceTwlReceived;
     
-    // 3. Summary calculations
+    // Buyer Summary - preserve frontend calculations
     const buyerBalanceTwlReceived = update.buyer?.balancePayment?.twlReceived || 0;
     
-    // Total Received = Advance TWL + Balance TWL
-    update.buyer.summary.totalReceived = buyerAdvanceTwlReceived + buyerBalanceTwlReceived;
-    
-    // Cancel
-    update.buyer.summary.cancel = 0;
-    
-    // Balance Received = Final Invoice - Total Received
-    update.buyer.summary.balanceReceived = 
-      update.buyer.proformaInvoice.finalInvoiceAmount - update.buyer.summary.totalReceived;
+    if (!update.buyer.summary.totalReceived) {
+      update.buyer.summary.totalReceived = buyerAdvanceTwlReceived + buyerBalanceTwlReceived;
+    }
     
     update.buyer.paymentTotal = update.buyer.summary.totalReceived;
   }

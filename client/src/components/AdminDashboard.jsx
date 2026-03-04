@@ -45,7 +45,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     buyerBalanceDate: '',
     buyerBalanceReference: '',
     buyerTotalReceived: '',
-    buyerCancel: '',
+    buyerCancel: '0',  // ✅ Set default to '0'
     buyerBalanceReceived: '',
     costingSupplierInvoiceAmount: '',
     costingTwlInvoiceAmount: '',
@@ -434,7 +434,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       buyerBalanceDate: '',
       buyerBalanceReference: '',
       buyerTotalReceived: '',
-      buyerCancel: '',
+      buyerCancel: '0',  // ✅ Reset to '0'
       buyerBalanceReceived: '',
       costingSupplierInvoiceAmount: '',
       costingTwlInvoiceAmount: '',
@@ -584,9 +584,11 @@ const AdminDashboard = ({ user, onLogout }) => {
     const advanceTwl = parseFloat(formData.buyerAdvanceTwlReceived) || 0;
     const balanceTwl = parseFloat(formData.buyerBalanceTwlReceived) || 0;
     const finalInvoice = parseFloat(formData.buyerFinalInvoiceAmount) || 0;
+    const buyerCancelAmount = parseFloat(formData.buyerCancel) || 0;  // ✅ Use manual cancel amount
     
     const totalReceived = advanceTwl + balanceTwl;
-    const balanceReceived = finalInvoice - totalReceived;
+    // Balance Received = Final Invoice - Total Received - Cancel Amount
+    const balanceReceived = finalInvoice - totalReceived - buyerCancelAmount;
     
     setFormData(prev => ({
       ...prev,
@@ -596,7 +598,8 @@ const AdminDashboard = ({ user, onLogout }) => {
   }, [
     formData.buyerAdvanceTwlReceived,
     formData.buyerBalanceTwlReceived,
-    formData.buyerFinalInvoiceAmount
+    formData.buyerFinalInvoiceAmount,
+    formData.buyerCancel  // ✅ Watch for cancel amount changes
   ]);
 
   // Auto-calculate costing profit, total and net profit

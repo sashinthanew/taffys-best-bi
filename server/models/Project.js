@@ -149,10 +149,10 @@ projectSchema.pre('save', function() {
   this.supplier.balancePayment.totalPayment = supplierBalanceAmount + supplierBalanceTwl;
   
   // 5. Supplier Summary Calculations
-  // Note: Total Amount, Cancel Amount, and Balance Payment are calculated on frontend
-  // and sent with the request. We preserve those values here.
-  // Only calculate if not provided (backward compatibility)
-  if (!this.supplier.summary.totalAmount) {
+  // Note: Summary fields (totalAmount, cancelAmount, balancePayment) are calculated on frontend
+  // and sent with the request. We preserve those values and don't recalculate.
+  // Only set defaults if fields are completely missing (backward compatibility)
+  if (this.supplier.summary.totalAmount === undefined || this.supplier.summary.totalAmount === null) {
     this.supplier.summary.totalAmount = 
       this.supplier.advancePayment.totalPayment + 
       this.supplier.balancePayment.totalPayment;
@@ -180,12 +180,15 @@ projectSchema.pre('save', function() {
     this.buyer.proformaInvoice.finalInvoiceAmount - buyerAdvanceTwlReceived;
   
   // 3. Buyer Summary Calculations
-  // Note: Total Received, Cancel, and Balance Received are calculated on frontend
-  // and sent with the request. We preserve those values here.
-  // Only calculate if not provided (backward compatibility)
+  // Note: Summary fields are ALL calculated on frontend with this logic:
+  //   - totalReceived = advanceTwlReceived + balanceTwlReceived
+  //   - cancel = manually entered by user
+  //   - balanceReceived = finalInvoiceAmount - totalReceived - cancel
+  // We preserve those values from frontend and don't recalculate.
+  // Only set defaults if fields are completely missing (backward compatibility)
   const buyerBalanceTwlReceived = this.buyer.balancePayment.twlReceived || 0;
   
-  if (!this.buyer.summary.totalReceived) {
+  if (this.buyer.summary.totalReceived === undefined || this.buyer.summary.totalReceived === null) {
     this.buyer.summary.totalReceived = buyerAdvanceTwlReceived + buyerBalanceTwlReceived;
   }
 
@@ -245,8 +248,9 @@ projectSchema.pre('findOneAndUpdate', function() {
     const supplierBalanceTwl = update.supplier?.balancePayment?.twlContribution || 0;
     update.supplier.balancePayment.totalPayment = supplierBalanceAmount + supplierBalanceTwl;
     
-    // Supplier Summary - preserve frontend calculations
-    if (!update.supplier.summary.totalAmount) {
+    // Supplier Summary - preserve all frontend calculations
+// Only set defaults if fields are completely missing
+    if (update.supplier.summary.totalAmount === undefined || update.supplier.summary.totalAmount === null) {
       update.supplier.summary.totalAmount = 
         update.supplier.advancePayment.totalPayment + 
         update.supplier.balancePayment.totalPayment;
@@ -278,10 +282,15 @@ projectSchema.pre('findOneAndUpdate', function() {
     update.buyer.advancePayment.balanceAmount = 
       update.buyer.proformaInvoice.finalInvoiceAmount - buyerAdvanceTwlReceived;
     
-    // Buyer Summary - preserve frontend calculations
+    // Buyer Summary - preserve all frontend calculations
+    // Frontend calculates:
+    //   - totalReceived = advanceTwlReceived + balanceTwlReceived
+    //   - cancel = manually entered by user
+    //   - balanceReceived = finalInvoiceAmount - totalReceived - cancel
+    // Only set defaults if fields are completely missing
     const buyerBalanceTwlReceived = update.buyer?.balancePayment?.twlReceived || 0;
     
-    if (!update.buyer.summary.totalReceived) {
+    if (update.buyer.summary.totalReceived === undefined || update.buyer.summary.totalReceived === null) {
       update.buyer.summary.totalReceived = buyerAdvanceTwlReceived + buyerBalanceTwlReceived;
     }
     

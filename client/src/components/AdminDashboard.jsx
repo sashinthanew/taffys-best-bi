@@ -584,11 +584,13 @@ const AdminDashboard = ({ user, onLogout }) => {
     const advanceTwl = parseFloat(formData.buyerAdvanceTwlReceived) || 0;
     const balanceTwl = parseFloat(formData.buyerBalanceTwlReceived) || 0;
     const finalInvoice = parseFloat(formData.buyerFinalInvoiceAmount) || 0;
-    const buyerCancelAmount = parseFloat(formData.buyerCancel) || 0;  // ✅ Use manual cancel amount
+    const cancelAmount = parseFloat(formData.buyerCancel) || 0;
     
+    // Total Received = Advance TWL Received + Balance TWL Received
     const totalReceived = advanceTwl + balanceTwl;
-    // Balance Received = Final Invoice - Total Received - Cancel Amount
-    const balanceReceived = finalInvoice - totalReceived - buyerCancelAmount;
+    
+    // Balance Received = Final Invoice Amount - Total Received - Cancel Amount
+    const balanceReceived = finalInvoice - totalReceived - cancelAmount;
     
     setFormData(prev => ({
       ...prev,
@@ -599,7 +601,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     formData.buyerAdvanceTwlReceived,
     formData.buyerBalanceTwlReceived,
     formData.buyerFinalInvoiceAmount,
-    formData.buyerCancel  // ✅ Watch for cancel amount changes
+    formData.buyerCancel
   ]);
 
   // Auto-calculate costing profit, total and net profit

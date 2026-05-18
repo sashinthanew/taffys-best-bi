@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import './AdminDashboard.css';
 import API_URL from '../config/api';
+import IncomeForm from './finance/IncomeForm';
+import ExpenseForm from './finance/ExpenseForm';
+import FinanceSummary from './finance/FinanceSummary';
+import TransactionList from './finance/TransactionList';
 
 const AdminDashboard = ({ user, onLogout }) => {
+  const [activeTab, setActiveTab] = useState('projects'); // 'projects' or 'finance'
   const [formData, setFormData] = useState({
     projectUniqNo: '',  // ✅ NEW: Unique project number
     projectName: '',
@@ -79,6 +84,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   
   const [expandedProject, setExpandedProject] = useState(null);
   const [exportFilter, setExportFilter] = useState('');
+  const [financeRefreshTrigger, setFinanceRefreshTrigger] = useState(0);
 
   useEffect(() => {
     fetchProjects();
@@ -726,6 +732,20 @@ const AdminDashboard = ({ user, onLogout }) => {
         <div className="nav-brand">
           <h2>🏢 TWL System - Admin Panel</h2>
         </div>
+        <div className="nav-tabs">
+          <button
+            className={`nav-tab ${activeTab === 'projects' ? 'active' : ''}`}
+            onClick={() => setActiveTab('projects')}
+          >
+            📋 Projects
+          </button>
+          <button
+            className={`nav-tab ${activeTab === 'finance' ? 'active' : ''}`}
+            onClick={() => setActiveTab('finance')}
+          >
+            💰 Finance
+          </button>
+        </div>
         <div className="nav-user">
           <span className="user-info">
             <span className="user-name">{user.name}</span>
@@ -741,7 +761,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       <div className="dashboard-content">
         <div className="welcome-section">
           <h1>Welcome Back, {user.name}! 👋</h1>
-          <p>Manage projects, suppliers, and buyers</p>
+          <p>{activeTab === 'projects' ? 'Manage projects, suppliers, and buyers' : 'Manage income and expenses'}</p>
         </div>
 
         {/* Global Messages */}
@@ -761,6 +781,9 @@ const AdminDashboard = ({ user, onLogout }) => {
           </div>
         )}
 
+        {/* Projects Tab */}
+        {activeTab === 'projects' && (
+          <>
         {/* Project Form */}
         {showForm && (
           <div className="form-section">
@@ -2139,6 +2162,32 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
         </div>
+          </>
+        )}
+
+        {/* Finance Tab */}
+        {activeTab === 'finance' && (
+          <div className="finance-section">
+            <div className="finance-grid">
+              <div className="finance-column">
+                <IncomeForm onSuccess={() => { fetchProjects(); setFinanceRefreshTrigger(prev => prev + 1); }} />
+              </div>
+              <div className="finance-column">
+                <ExpenseForm onSuccess={() => { fetchProjects(); setFinanceRefreshTrigger(prev => prev + 1); }} />
+              </div>
+            </div>
+            
+            <FinanceSummary refreshTrigger={financeRefreshTrigger} />
+            
+            <div className="transactions-section">
+              <h2 className="section-title">📊 Recent Transactions</h2>
+              <div className="transaction-tabs">
+                <TransactionList type="income" onUpdate={() => { fetchProjects(); setFinanceRefreshTrigger(prev => prev + 1); }} />
+                <TransactionList type="expense" onUpdate={() => { fetchProjects(); setFinanceRefreshTrigger(prev => prev + 1); }} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -41,9 +41,13 @@ app.use(express.json());
 // Routes
 const authRoutes = require('./routes/auth');
 const projectRoutes = require('./routes/projects');
+const incomeRoutes = require('./routes/income');
+const expenseRoutes = require('./routes/expense');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/income', incomeRoutes);
+app.use('/api/expense', expenseRoutes);
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI;
